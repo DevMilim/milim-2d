@@ -1,0 +1,22 @@
+[package]
+name = "milim-2d"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossbeam-channel = "0.5.15"
+indexmap = "2.13.0"
+macros = { version = "0.1.0", path = "macros" }
+rodio = "0.21.1"
+sdl2 = { version = "0.38.0", features = [
+    "ttf",
+    "gfx",
+    "image",
+    "mixer",
+    "bundled",
+] }
+uuid = { version = "1.20.0", features = ["v4"] }
+
+[workspace]
+members = ["app","macros"]
+resolver = "3"
