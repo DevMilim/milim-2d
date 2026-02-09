@@ -1,3 +1,8 @@
+# Milim 2D
+
+Example:
+
+```Rust
 use milim_2d::{
     Base, Component, DrawCommands, Engine, EngineContext, GameObject, GameObjectBase, Keycode,
     Sdl2Adapter, Transform2D,
@@ -83,3 +88,5 @@ fn main() {
     });
     engine.run();
 }
+
+```
