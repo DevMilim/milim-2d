@@ -1,8 +1,8 @@
-use crate::{Color, EngineCommands, WindowConfig};
+use crate::{Color, EngineCommands, Id, WindowConfig};
 
 pub enum DrawCommands {
     DrawImage {
-        name: &'static str,
+        name: Id,
         x: f32,
         y: f32,
         scale: f32,
@@ -29,7 +29,7 @@ pub trait WindowGraphicsAdapter {
     fn pool_events(&mut self) -> Vec<EngineCommands>;
     fn clear(&mut self, color: Color);
     fn preset(&mut self);
-    fn load_image(&mut self, name: &str, path: &str);
+    fn load_image(&mut self, path: &str) -> Id;
     fn get_fps(&self) -> f32;
     fn set_fps(&mut self, fps: u32);
 

@@ -1,20 +1,34 @@
 use std::sync::LazyLock;
 
+use uuid::Uuid;
+
 use crate::{Base, EngineContext, GameObjectBase, GlobalEvent, Transform2D};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Id {
+    id: Uuid,
+}
+
+impl Id {
+    pub fn new() -> Self {
+        Self { id: Uuid::new_v4() }
+    }
+}
 
 pub trait GameObject: GameObjectBase {
     type Message;
 
     fn start(&mut self, ctx: &mut EngineContext) {}
     fn update(&mut self, ctx: &mut EngineContext, delta: f32) {}
-    fn on_event(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {}
+    fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {}
     fn late_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
     fn fixed_update(&mut self, ctx: &mut EngineContext) {}
     fn destroy(&mut self, ctx: &mut EngineContext) {}
 }
 
 pub trait Component {
-    type Message;
+    type Config;
+    fn new(config: Self::Config) -> Self;
     fn start(&mut self, ctx: &mut EngineContext, base: &mut Base) {}
     fn update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn late_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
@@ -33,6 +47,7 @@ pub trait GameObjectDispatch {
     fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32);
     fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base);
     fn dispatch_event(&mut self, ctx: &mut EngineContext, event: &GlobalEvent);
+    fn dispatch_message(&mut self, ctx: &mut EngineContext);
     fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base);
     fn dispatch_destroy(&mut self, ctx: &mut EngineContext);
 }
@@ -99,68 +114,10 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
             obj.dispatch_event(ctx, event);
         }
     }
-}
 
-impl GameObjectDispatch for Vec<Box<dyn GameObjectDispatch>> {
-    fn dispatch_start(&mut self, ctx: &mut EngineContext, base: &Base) {
-        self.retain_mut(|obj| {
-            obj.dispatch_start(ctx, base);
-            if obj.is_pending_removal() {
-                obj.dispatch_destroy(ctx);
-                return false;
-            }
-            return true;
-        });
-    }
-
-    fn dispatch_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
-        self.retain_mut(|obj| {
-            obj.dispatch_update(ctx, base, delta);
-            if obj.is_pending_removal() {
-                obj.dispatch_destroy(ctx);
-                return false;
-            }
-            return true;
-        });
-    }
-
-    fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
-        self.retain_mut(|obj| {
-            obj.dispatch_late_update(ctx, base, delta);
-            if obj.is_pending_removal() {
-                obj.dispatch_destroy(ctx);
-                return false;
-            }
-            return true;
-        });
-    }
-
-    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base) {
-        self.retain_mut(|obj| {
-            obj.dispatch_fixed_update(ctx, base);
-            if obj.is_pending_removal() {
-                obj.dispatch_destroy(ctx);
-                return false;
-            }
-            return true;
-        });
-    }
-
-    fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base) {
+    fn dispatch_message(&mut self, ctx: &mut EngineContext) {
         for obj in self.iter_mut() {
-            obj.dispatch_draw(ctx, base);
-        }
-    }
-
-    fn dispatch_destroy(&mut self, ctx: &mut EngineContext) {
-        for obj in self.iter_mut() {
-            obj.dispatch_destroy(ctx);
-        }
-    }
-
-    fn dispatch_event(&mut self, ctx: &mut EngineContext, event: &GlobalEvent) {
-        for obj in self.iter_mut() {
-            obj.dispatch_event(ctx, event);
+            obj.dispatch_message(ctx);
         }
     }
 }
@@ -223,6 +180,12 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Option<T> {
     fn dispatch_event(&mut self, ctx: &mut EngineContext, event: &GlobalEvent) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_event(ctx, event);
+        }
+    }
+
+    fn dispatch_message(&mut self, ctx: &mut EngineContext) {
+        if let Some(obj) = self.as_mut() {
+            obj.dispatch_message(ctx);
         }
     }
 }

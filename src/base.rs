@@ -1,13 +1,11 @@
-use uuid::Uuid;
-
-use crate::{Transform2D, Vector2};
+use crate::{Id, Transform2D, Vector2};
 
 #[derive(Clone)]
 pub struct Base {
+    pub id: Id,
     pub transform: Transform2D,
     pub pending_removal: bool,
     pub top_level: bool,
-    pub id: Uuid,
     pub z_index: i32,
 }
 
@@ -17,7 +15,7 @@ impl Base {
             transform,
             pending_removal: false,
             top_level: false,
-            id: Uuid::new_v4(),
+            id: Id::new(),
             z_index: 0,
         }
     }

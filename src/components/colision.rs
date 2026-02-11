@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::{Component, EngineContext};
 
 pub enum Shape {
     Rectangle {
@@ -19,5 +19,12 @@ pub struct ColisionShape2D {
 }
 
 impl Component for ColisionShape2D {
-    type Message = ();
+    type Config = ();
+    fn new(config: Self::Config) -> Self {
+        Self {
+            shape: Shape::Circle { radius: 1.0 },
+            disabled: false,
+            layer: 1,
+        }
+    }
 }

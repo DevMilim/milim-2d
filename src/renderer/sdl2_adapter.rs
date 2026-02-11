@@ -12,7 +12,7 @@ use std::{
     mem::transmute,
 };
 
-use crate::{DrawCommands, EngineCommands, Vector2, WindowGraphicsAdapter};
+use crate::{DrawCommands, EngineCommands, Id, Vector2, WindowGraphicsAdapter};
 
 pub struct WindowConfig {
     pub title: String,
@@ -26,7 +26,7 @@ pub struct Sdl2Adapter<'a> {
     event_pump: EventPump,
     window_config: WindowConfig,
     texture_creator: TextureCreator<WindowContext>,
-    textures: HashMap<String, Texture<'a>>,
+    textures: HashMap<Id, Texture<'a>>,
     video: VideoSubsystem,
     fps: FPSManager,
     draw_queue: Vec<(i32, DrawCommands)>,
@@ -94,7 +94,7 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
         let _ = self.fps.set_framerate(fps);
     }
 
-    fn load_image(&mut self, name: &str, path: &str) {
+    fn load_image(&mut self, path: &str) -> Id {
         use sdl2::image::LoadTexture;
         let texture = self
             .texture_creator
@@ -102,7 +102,9 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
             .expect("Falha ao carregar texture");
 
         let unsafe_texture = unsafe { transmute(texture) };
-        self.textures.insert(name.to_string(), unsafe_texture);
+        let id = Id::new();
+        self.textures.insert(id, unsafe_texture);
+        id
     }
 
     fn pool_events(&mut self) -> Vec<crate::EngineCommands> {
@@ -145,7 +147,7 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
                     flip_h,
                     flip_v,
                 } => {
-                    if let Some(texture) = self.textures.get(&name.to_string()) {
+                    if let Some(texture) = self.textures.get(&name) {
                         let src = Rect::new(
                             image_x as i32,
                             image_y as i32,

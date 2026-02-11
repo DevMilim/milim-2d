@@ -23,7 +23,7 @@ struct GameReceiver {
     generics: syn::Generics,
     data: Data<darling::util::Ignored, GameField>,
     #[darling(default, with = "parse_subscriptions")]
-    subscribe: Vec<Subscription>
+    subscribe: Vec<Subscription>,
 }
 
 #[derive(Debug)]
@@ -70,7 +70,6 @@ pub fn scene_tree(input: TokenStream) -> TokenStream {
                 self.#handler_ident(ctx, payload);
             }
         });
-        
     }
 
     let struct_name = &receiver.ident;
@@ -139,16 +138,20 @@ pub fn scene_tree(input: TokenStream) -> TokenStream {
                 self.start(ctx);
                 #( self.#object_fields.dispatch_start(ctx, &self.#base_field); )*
             }
-            fn dispatch_event(&mut self, ctx: &mut ::milim_2d::EngineContext, event: &::milim_2d::GlobalEvent){
-                if let ::milim_2d::GlobalEvent::Send{id, message} = event{
-                    if self.base().id == *id{
-                        if let Some(event) = message.downcast_ref::<<Self as ::milim_2d::GameObject>::Message>(){
-                            self.on_event(ctx, event)
+            fn dispatch_message(&mut self, ctx: &mut ::milim_2d::EngineContext){
+                if let Some(msgs) = ctx.mailbox.remove(&self.base().id){
+                    for msg in msgs {
+                        if let Some(message) = msg.downcast_ref::<<Self as ::milim_2d::GameObject>::Message>(){
+                            self.on_message(ctx, message)
                         } else{
                             println!("Tipo de evento incompativel recebido");
                         }
                     }
                 }
+                #(self.#object_fields.dispatch_message(ctx);)*
+            }
+            fn dispatch_event(&mut self, ctx: &mut ::milim_2d::EngineContext, event: &::milim_2d::GlobalEvent){
+                
                 if let ::milim_2d::GlobalEvent::Broadcast(any_event) = event{
                     #(#subscribe_arms)*
                 }
@@ -216,4 +219,105 @@ fn type_is_base(ty: &Type) -> bool {
         }
         _ => false,
     }
+}
+
+#[proc_macro_derive(Scene)]
+pub fn scene_dispatch_derive(input: TokenStream) -> TokenStream{
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    let name = &input.ident;
+
+    let data = match input.data {
+        syn::Data::Enum(d) => d,
+        _=> return syn::Error::new_spanned(name, "Scene so pode ser utilizado em enum").into_compile_error().into(),
+    };
+
+    let mut match_arms_start = Vec::new();
+    let mut match_arms_update = Vec::new();
+    let mut match_arms_late = Vec::new();
+    let mut match_arms_fixed = Vec::new();
+    let mut match_arms_draw = Vec::new();
+    let mut match_arms_destroy = Vec::new();
+    let mut match_arms_event = Vec::new();
+    let mut match_arms_message = Vec::new();
+    let mut match_arms_pending = Vec::new();
+
+    for variant in data.variants{
+        let ident = variant.ident;
+        match_arms_start.push(quote! {
+            Self::#ident(inner) => inner.dispatch_start(ctx, parent_base),
+        });
+        match_arms_update.push(quote! {
+            Self::#ident(inner) => inner.dispatch_update(ctx, parent_base, delta),
+        });
+        match_arms_late.push(quote! {
+            Self::#ident(inner) => inner.dispatch_late_update(ctx, parent_base, delta),
+        });
+        match_arms_fixed.push(quote! {
+            Self::#ident(inner) => inner.dispatch_fixed_update(ctx, parent_base),
+        });
+        match_arms_draw.push(quote! {
+            Self::#ident(inner) => inner.dispatch_draw(ctx, parent_base),
+        });
+        match_arms_destroy.push(quote! {
+            Self::#ident(inner) => inner.dispatch_destroy(ctx),
+        });
+        match_arms_event.push(quote! {
+            Self::#ident(inner) => inner.dispatch_event(ctx, event),
+        });
+        match_arms_message.push(quote! {
+            Self::#ident(inner) => inner.dispatch_message(ctx),
+        });
+        match_arms_pending.push(quote! {
+            Self::#ident(inner) => inner.is_pending_removal(),
+        });
+    }
+    quote! {
+        impl ::milim_2d::GameObjectDispatch for #name {
+            fn is_pending_removal(&self) -> bool{
+                match self{
+                    #(#match_arms_pending)*
+                }
+            }
+            fn dispatch_start(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base) {
+                match self{
+                    #(#match_arms_start)*
+                }
+            }
+            fn dispatch_event(&mut self, ctx: &mut ::milim_2d::EngineContext, event: &::milim_2d::GlobalEvent){
+                match self{
+                    #(#match_arms_event)*
+                }
+            }
+            fn dispatch_message(&mut self, ctx: &mut ::milim_2d::EngineContext){
+                match self{
+                    #(#match_arms_message)*
+                }
+            }
+            fn dispatch_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base, delta: f32) {
+                match self{
+                    #(#match_arms_update)*
+                }
+            }
+            fn dispatch_late_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base, delta: f32) {
+                match self{
+                    #(#match_arms_late)*
+                }
+            }
+            fn dispatch_fixed_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base) {
+                match self{
+                    #(#match_arms_fixed)*
+                }
+            }
+            fn dispatch_draw(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base) {
+                match self{
+                    #(#match_arms_draw)*
+                }
+            }
+            fn dispatch_destroy(&mut self, ctx: &mut ::milim_2d::EngineContext) {
+                match self{
+                    #(#match_arms_destroy)*
+                }
+            }
+        }
+    }.into()
 }
