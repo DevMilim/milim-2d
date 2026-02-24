@@ -198,7 +198,7 @@ pub fn scene_tree(input: TokenStream) -> TokenStream {
                 #( self.#object_fields.dispatch_draw(ctx, &self.#base_field); )*
             }
             fn dispatch_destroy(&mut self, ctx: &mut ::milim_2d::EngineContext) {
-                #(self.#component_fields.destroy(ctx);)*
+                #(self.#component_fields.destroy(ctx, &self.#base_field);)*
                 self.destroy(ctx);
                 #( self.#object_fields.dispatch_destroy(ctx); )*
             }

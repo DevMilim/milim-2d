@@ -11,7 +11,7 @@ pub struct Id {
 
 impl Id {
     pub fn new() -> Self {
-        Self { id: Uuid::new_v4() }
+        Self { id: Uuid::now_v7() }
     }
 }
 
@@ -27,15 +27,13 @@ pub trait GameObject: GameObjectBase {
 }
 
 pub trait Component {
-    type Config;
-    fn new(config: Self::Config) -> Self;
     fn start(&mut self, ctx: &mut EngineContext, base: &mut Base) {}
     fn update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn late_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn on_event(&mut self, ctx: &mut EngineContext, base: &mut Base, event: &GlobalEvent) {}
     fn fixed_update(&mut self, ctx: &mut EngineContext, base: &mut Base) {}
     fn draw(&mut self, ctx: &mut EngineContext, base: &Base) {}
-    fn destroy(&mut self, ctx: &mut EngineContext) {}
+    fn destroy(&mut self, ctx: &mut EngineContext, base: &Base) {}
 }
 
 pub trait GameObjectDispatch {
@@ -123,57 +121,69 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
 }
 
 impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Option<T> {
+    fn is_pending_removal(&self) -> bool {
+        match self {
+            Some(obj) => obj.is_pending_removal(),
+            None => false,
+        }
+    }
     fn dispatch_start(&mut self, ctx: &mut EngineContext, base: &Base) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_start(ctx, base);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 
     fn dispatch_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_update(ctx, base, delta);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 
     fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_late_update(ctx, base, delta);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 
     fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_fixed_update(ctx, base);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 
     fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_draw(ctx, base);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 
     fn dispatch_destroy(&mut self, ctx: &mut EngineContext) {
         if let Some(obj) = self.as_mut() {
             obj.dispatch_destroy(ctx);
-        }
-        if self.is_pending_removal() {
-            *self = None;
+            if obj.is_pending_removal() {
+                obj.dispatch_destroy(ctx);
+                *self = None;
+            }
         }
     }
 

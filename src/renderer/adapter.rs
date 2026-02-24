@@ -1,38 +1,53 @@
-use crate::{Color, EngineCommands, Id, WindowConfig};
+use std::collections::VecDeque;
 
-pub enum DrawCommands {
-    DrawImage {
-        name: Id,
-        x: f32,
-        y: f32,
-        scale: f32,
+use crate::{Color, EngineCommands, Vector2, WindowConfig};
 
-        image_x: f32,
-        image_y: f32,
-        image_width: f32,
-        image_height: f32,
+#[derive(Debug)]
+pub enum DrawCommandType {
+    Sprite,
+    Rect,
+}
 
-        angle: f32,
-        flip_h: bool,
-        flip_v: bool,
-    },
-    DrawRect {
-        rect: crate::Rect,
-        color: Color,
-    },
+pub struct DrawCommand {
+    pub cmd_type: DrawCommandType,
+    pub depth: i16,
+    pub material: DrawData,
+}
+
+pub struct DrawData {
+    pub pos: Vector2,
+    pub size: Vector2,
+    pub uv_min: Vector2,
+    pub uv_max: Vector2,
+    pub rotation: f32,
+    pub color: Color,
+    pub image: usize,
 }
 
 pub trait WindowGraphicsAdapter {
     fn new(window_config: WindowConfig) -> Self
     where
         Self: Sized;
-    fn pool_events(&mut self) -> Vec<EngineCommands>;
+
+    fn pool_events(&mut self, queue: &mut VecDeque<EngineCommands>);
+
     fn clear(&mut self, color: Color);
-    fn preset(&mut self);
-    fn load_image(&mut self, path: &str) -> Id;
+
+    fn present(&mut self);
+
+    fn load_image(&mut self, path: &str) -> usize;
+
     fn get_fps(&self) -> f32;
+
     fn set_fps(&mut self, fps: u32);
 
-    fn draw(&mut self, command: DrawCommands, z_index: i32);
-    fn flush_draw_queue(&mut self);
+    fn draw(&mut self, command: DrawCommand, z_index: i32);
+
+    fn render(&mut self);
+
+    fn resize(&mut self, width: u32, height: u32);
+
+    fn get_window_size(&self) -> Vector2;
+
+    fn set_camera_pos(&mut self, pos: &Vector2);
 }

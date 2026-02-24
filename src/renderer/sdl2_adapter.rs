@@ -1,18 +1,15 @@
 pub use sdl2::keyboard::Keycode;
 use sdl2::{
     EventPump, Sdl, VideoSubsystem,
+    event::WindowEvent,
     gfx::framerate::FPSManager,
     pixels::Color,
-    rect::Rect,
     render::{Texture, TextureCreator, WindowCanvas},
     video::WindowContext,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    mem::transmute,
-};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use crate::{DrawCommands, EngineCommands, Id, Vector2, WindowGraphicsAdapter};
+use crate::{DrawCommand, EngineCommands, Vector2, WindowGraphicsAdapter};
 
 pub struct WindowConfig {
     pub title: String,
@@ -20,19 +17,21 @@ pub struct WindowConfig {
     pub height: u32,
 }
 
-pub struct Sdl2Adapter<'a> {
+pub struct Sdl2Adapter {
     canvas: WindowCanvas,
     sdl: Sdl,
     event_pump: EventPump,
     window_config: WindowConfig,
     texture_creator: TextureCreator<WindowContext>,
-    textures: HashMap<Id, Texture<'a>>,
+    textures: Vec<Texture>,
+    texture_path: HashMap<String, usize>,
     video: VideoSubsystem,
     fps: FPSManager,
-    draw_queue: Vec<(i32, DrawCommands)>,
+    draw_queue: BTreeMap<i32, Vec<DrawCommand>>,
+    camera_pos: Vector2,
 }
 
-impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
+impl WindowGraphicsAdapter for Sdl2Adapter {
     fn new(window_config: WindowConfig) -> Self
     where
         Self: Sized,
@@ -71,9 +70,11 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
             event_pump: sdl_context.event_pump().unwrap(),
             sdl: sdl_context,
             window_config,
-            textures: HashMap::new(),
+            textures: Vec::new(),
             fps,
-            draw_queue: Vec::new(),
+            draw_queue: BTreeMap::new(),
+            texture_path: HashMap::new(),
+            camera_pos: Vector2::ZERO,
         }
     }
     fn clear(&mut self, color: crate::Color) {
@@ -82,8 +83,8 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
         self.canvas.clear();
     }
 
-    fn preset(&mut self) {
-        self.flush_draw_queue();
+    fn present(&mut self) {
+        self.render();
         self.canvas.present();
         self.fps.delay();
     }
@@ -94,134 +95,80 @@ impl<'a> WindowGraphicsAdapter for Sdl2Adapter<'a> {
         let _ = self.fps.set_framerate(fps);
     }
 
-    fn load_image(&mut self, path: &str) -> Id {
+    fn load_image(&mut self, path: &str) -> usize {
         use sdl2::image::LoadTexture;
+
+        if let Some(id) = self.texture_path.get(path) {
+            return *id;
+        }
         let texture = self
             .texture_creator
             .load_texture(path)
             .expect("Falha ao carregar texture");
+        let index = self.textures.len();
 
-        let unsafe_texture = unsafe { transmute(texture) };
-        let id = Id::new();
-        self.textures.insert(id, unsafe_texture);
-        id
+        self.textures.push(texture);
+        self.texture_path.insert(path.to_string(), index);
+        index
     }
 
-    fn pool_events(&mut self) -> Vec<crate::EngineCommands> {
+    fn pool_events(&mut self, queue: &mut VecDeque<EngineCommands>) {
         use sdl2::event::Event::*;
-        self.event_pump
-            .poll_iter()
-            .filter_map(|event| match event {
-                Quit { .. } => Some(EngineCommands::Quit),
+        for event in self.event_pump.poll_iter() {
+            match event {
+                Quit { .. } => {
+                    queue.push_back(EngineCommands::Quit);
+                }
                 KeyDown {
-                    keycode: Some(key), ..
-                } => Some(EngineCommands::KeyDown(key)),
-                KeyUp {
-                    keycode: Some(key), ..
-                } => Some(EngineCommands::KeyUp(key)),
-                MouseMotion { x, y, .. } => Some(EngineCommands::MousePosition(x as f32, y as f32)),
-                _ => None,
-            })
-            .collect()
-    }
-
-    fn draw(&mut self, command: super::DrawCommands, z_index: i32) {
-        self.draw_queue.push((z_index, command));
-    }
-
-    fn flush_draw_queue(&mut self) {
-        self.draw_queue.sort_by(|a, b| a.0.cmp(&b.0));
-
-        while let Some(cmd) = self.draw_queue.pop() {
-            match cmd.1 {
-                DrawCommands::DrawImage {
-                    name,
-                    x,
-                    y,
-                    scale,
-                    image_x,
-                    image_y,
-                    image_width,
-                    image_height,
-                    angle,
-                    flip_h,
-                    flip_v,
+                    keycode: Some(key),
+                    repeat,
+                    ..
                 } => {
-                    if let Some(texture) = self.textures.get(&name) {
-                        let src = Rect::new(
-                            image_x as i32,
-                            image_y as i32,
-                            image_width as u32,
-                            image_height as u32,
-                        );
-                        let dst = Rect::new(
-                            x as i32,
-                            y as i32,
-                            (image_width * scale) as u32,
-                            (image_height * scale) as u32,
-                        );
-                        let _ = self.canvas.copy_ex(
-                            texture,
-                            Some(src),
-                            Some(dst),
-                            angle.into(),
-                            None,
-                            flip_h,
-                            flip_v,
-                        );
+                    if !repeat {
+                        queue.push_back(EngineCommands::KeyDown(key));
                     }
                 }
-                DrawCommands::DrawRect { rect, color } => {
-                    self.canvas
-                        .set_draw_color(Color::RGBA(color.r, color.g, color.b, color.a));
-                    let _ = self.canvas.fill_rect(Rect::new(
-                        rect.x as i32,
-                        rect.y as i32,
-                        rect.width as u32,
-                        rect.height as u32,
-                    ));
+                KeyUp {
+                    keycode: Some(key), ..
+                } => queue.push_back(EngineCommands::KeyUp(key)),
+                MouseMotion { x, y, .. } => {
+                    queue.push_back(EngineCommands::MousePosition(x as f32, y as f32));
                 }
-            }
+                Window { win_event, .. } => {
+                    if let WindowEvent::Resized(w, h) = win_event {
+                        self.window_config.width = w as u32;
+                        self.window_config.height = h as u32;
+                    }
+                }
+                _ => {}
+            };
         }
     }
-}
-pub struct InputState {
-    key_pressed: HashSet<Keycode>,
-    key_just_pressed: HashSet<Keycode>,
-    mouse_position: Vector2,
-}
 
-impl InputState {
-    pub fn new() -> Self {
-        Self {
-            key_pressed: HashSet::new(),
-            key_just_pressed: HashSet::new(),
-            mouse_position: Vector2::ZERO,
+    fn draw(&mut self, command: super::DrawCommand, z_index: i32) {
+        self.draw_queue.entry(z_index).or_default().push(command);
+    }
+
+    fn render(&mut self) {
+        let window_size = self.get_window_size();
+        let half_screen = Vector2::new(window_size.x / 2.0, window_size.y / 2.0);
+
+        for (_z, commands) in self.draw_queue.iter_mut() {
+            for cmd in commands.drain(..) {}
         }
     }
-    pub(crate) fn set_mouse_position(&mut self, x: f32, y: f32) {
-        self.mouse_position = Vector2::new(x, y)
+
+    fn resize(&mut self, width: u32, height: u32) {
+        let window = self.canvas.window_mut();
+        let _ = window.set_size(width, height);
     }
-    pub fn mouse_position(&self) -> Vector2 {
-        self.mouse_position
+
+    fn get_window_size(&self) -> Vector2 {
+        let window_size = self.canvas.window().size();
+        Vector2::new(window_size.0 as f32, window_size.1 as f32)
     }
-    pub fn is_key_pressed(&self, key: Keycode) -> bool {
-        self.key_pressed.contains(&key)
-    }
-    pub fn is_key_just_pressed(&self, key: Keycode) -> bool {
-        self.key_just_pressed.contains(&key)
-    }
-    pub fn clear_frame_data(&mut self) {
-        self.key_just_pressed.clear();
-    }
-    pub fn update_key(&mut self, key: Keycode, pressed: bool) {
-        if pressed {
-            if !self.key_pressed.contains(&key) {
-                self.key_just_pressed.insert(key);
-            }
-            self.key_pressed.insert(key);
-        } else {
-            self.key_pressed.remove(&key);
-        }
+
+    fn set_camera_pos(&mut self, pos: &Vector2) {
+        self.camera_pos = *pos
     }
 }

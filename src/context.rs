@@ -2,7 +2,9 @@ use std::{any::Any, collections::VecDeque};
 
 use indexmap::IndexMap;
 
-use crate::{EngineCommands, GlobalEvent, Id, InputState, WindowGraphicsAdapter};
+use crate::{
+    CollisionWorld, EngineCommands, GlobalEvent, Id, InputState, Vector2, WindowGraphicsAdapter,
+};
 
 pub struct EngineContext<'a> {
     pub adapter: &'a mut dyn WindowGraphicsAdapter,
@@ -10,6 +12,8 @@ pub struct EngineContext<'a> {
     pub event_queue: &'a mut VecDeque<EngineCommands>,
     pub events: &'a mut VecDeque<GlobalEvent>,
     pub mailbox: &'a mut IndexMap<Id, Vec<Box<dyn Any>>>,
+    pub collision: &'a mut CollisionWorld,
+    pub camera_pos: &'a mut Vector2,
 }
 impl<'a> EngineContext<'a> {
     pub fn new(
@@ -18,6 +22,8 @@ impl<'a> EngineContext<'a> {
         event_queue: &'a mut VecDeque<EngineCommands>,
         events: &'a mut VecDeque<GlobalEvent>,
         mailbox: &'a mut IndexMap<Id, Vec<Box<dyn Any>>>,
+        collision: &'a mut CollisionWorld,
+        camera_pos: &'a mut Vector2,
     ) -> Self {
         Self {
             adapter,
@@ -25,6 +31,8 @@ impl<'a> EngineContext<'a> {
             event_queue,
             events,
             mailbox,
+            collision,
+            camera_pos,
         }
     }
     pub fn send<T: 'static>(&mut self, id: Id, message: T) {

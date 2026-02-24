@@ -1,17 +1,13 @@
-use std::{
-    any::Any,
-    collections::{HashMap, VecDeque},
-    time::Instant,
-};
+use std::{any::Any, collections::VecDeque, time::Instant};
 
 use indexmap::IndexMap;
 use sdl2::keyboard::Keycode;
 
 use crate::{
-    Base, Color, EngineContext, GameObjectDispatch, GlobalEvent, Id, InputState, Transform2D,
-    WindowConfig, WindowGraphicsAdapter,
+    Base, CollisionWorld, Color, EngineContext, GameObjectDispatch, GlobalEvent, Id, InputState,
+    Transform2D, TriggerEvent, TriggerKind, Vector2, WindowConfig, WindowGraphicsAdapter,
 };
-
+#[derive(Debug, Clone)]
 pub enum EngineCommands {
     KeyDown(Keycode),
     KeyUp(Keycode),
@@ -24,10 +20,12 @@ pub struct Engine<B: WindowGraphicsAdapter, S: GameObjectDispatch> {
     adapter: B,
     base: Base,
     is_running: bool,
-    input: InputState,
+    pub input: InputState,
     event_queue: VecDeque<EngineCommands>,
     events: VecDeque<GlobalEvent>,
     mailbox: IndexMap<Id, Vec<Box<dyn Any>>>,
+    physics: CollisionWorld,
+    camera_pos: Vector2,
 }
 
 impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
@@ -45,6 +43,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             event_queue: VecDeque::new(),
             events: VecDeque::new(),
             mailbox: IndexMap::new(),
+            physics: CollisionWorld::new(),
+            camera_pos: Vector2::ZERO,
         }
     }
     pub fn push(&mut self, mut scene: S) {
@@ -54,6 +54,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
+            &mut self.physics,
+            &mut self.camera_pos,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.push(scene);
@@ -65,6 +67,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
+            &mut self.physics,
+            &mut self.camera_pos,
         );
         match self.objects.pop() {
             Some(mut scene) => scene.dispatch_destroy(&mut ctx),
@@ -78,6 +82,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
+            &mut self.physics,
+            &mut self.camera_pos,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.clear();
@@ -93,6 +99,9 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
         while self.is_running {
             self.input.clear_frame_data();
 
+            self.adapter.pool_events(&mut self.event_queue);
+            self.process_commands();
+
             let now = Instant::now();
             let mut delta_time = (now - last).as_secs_f32();
             last = now;
@@ -102,69 +111,102 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             }
 
             accumulator += delta_time;
+            let mut ctx = EngineContext::new(
+                &mut self.adapter,
+                &self.input,
+                &mut self.event_queue,
+                &mut self.events,
+                &mut self.mailbox,
+                &mut self.physics,
+                &mut self.camera_pos,
+            );
 
-            let adapter_events = self.adapter.pool_events();
-            self.event_queue.extend(adapter_events);
-            self.process_commands();
-
-            self.event_queue.clear();
-            {
-                let mut ctx = EngineContext::new(
-                    &mut self.adapter,
-                    &self.input,
-                    &mut self.event_queue,
-                    &mut self.events,
-                    &mut self.mailbox,
-                );
-
-                Self::flush_messages_and_events(&mut self.objects, &mut ctx, 10);
-
-                if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_update(&mut ctx, &self.base, delta_time)
-                }
-                Self::flush_messages_and_events(&mut self.objects, &mut ctx, 10);
-                while accumulator > FIXED_DT {
-                    if let Some(obj) = self.objects.last_mut() {
-                        obj.dispatch_fixed_update(&mut ctx, &self.base)
-                    }
-                    accumulator -= FIXED_DT;
-                    Self::flush_messages_and_events(&mut self.objects, &mut ctx, 10);
-                }
-
-                if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_late_update(&mut ctx, &self.base, delta_time)
-                }
-                Self::flush_messages_and_events(&mut self.objects, &mut ctx, 10);
+            if let Some(obj) = self.objects.last_mut() {
+                obj.dispatch_update(&mut ctx, &self.base, delta_time)
             }
-            self.adapter.clear(Color {
+            while accumulator > FIXED_DT {
+                if let Some(obj) = self.objects.last_mut() {
+                    obj.dispatch_fixed_update(&mut ctx, &self.base)
+                }
+                accumulator -= FIXED_DT;
+            }
+
+            if let Some(obj) = self.objects.last_mut() {
+                obj.dispatch_late_update(&mut ctx, &self.base, delta_time)
+            }
+            Self::flush_messages_and_events(&mut self.objects, &mut ctx);
+            ctx.collision.step();
+
+            for (a, b) in ctx.collision.get_entered_pairs() {
+                let da = ctx.collision.colliders.get(&a).unwrap();
+                let db = ctx.collision.colliders.get(&b).unwrap();
+
+                if da.is_sensor {
+                    let ev = TriggerEvent {
+                        owner: b.id,
+                        sensor: a.clone(),
+                        kind: TriggerKind::Enter,
+                    };
+                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                }
+                if db.is_sensor {
+                    let ev = TriggerEvent {
+                        owner: a.id,
+                        sensor: b.clone(),
+                        kind: TriggerKind::Enter,
+                    };
+                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                }
+            }
+            for (a, b) in ctx.collision.get_exited_pairs() {
+                let da = ctx.collision.colliders.get(&a).unwrap();
+                let db = ctx.collision.colliders.get(&b).unwrap();
+
+                if da.is_sensor {
+                    let ev = TriggerEvent {
+                        owner: b.id,
+                        sensor: a.clone(),
+                        kind: TriggerKind::Exit,
+                    };
+                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                }
+                if db.is_sensor {
+                    let ev = TriggerEvent {
+                        owner: a.id,
+                        sensor: b.clone(),
+                        kind: TriggerKind::Exit,
+                    };
+                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                }
+            }
+
+            ctx.adapter.set_camera_pos(&ctx.camera_pos);
+
+            ctx.adapter.clear(Color {
                 r: 0,
                 g: 0,
                 b: 0,
                 a: 0,
             });
             {
-                let mut ctx = EngineContext::new(
-                    &mut self.adapter,
-                    &self.input,
-                    &mut self.event_queue,
-                    &mut self.events,
-                    &mut self.mailbox,
-                );
                 if let Some(obj) = self.objects.last_mut() {
                     obj.dispatch_draw(&mut ctx, &self.base)
                 } else {
                     self.quit();
                 }
             }
+
             self.process_commands();
-            self.adapter.preset();
+            self.adapter.present();
+            self.physics.commit();
         }
     }
+
     pub fn quit(&mut self) {
         self.is_running = false
     }
-    pub fn flush_messages_and_events(objects: &mut Vec<S>, ctx: &mut EngineContext, loops: i32) {
-        for _ in 0..loops {
+    pub fn flush_messages_and_events(objects: &mut Vec<S>, ctx: &mut EngineContext) {
+        for _ in 0..10 {
             let mut something_processed = false;
             while let Some(event) = &ctx.events.pop_back() {
                 something_processed = true;
@@ -184,7 +226,7 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
         }
     }
     pub fn process_commands(&mut self) {
-        while let Some(event) = self.event_queue.pop_back() {
+        while let Some(event) = self.event_queue.pop_front() {
             match event {
                 EngineCommands::Quit => self.is_running = false,
                 EngineCommands::KeyDown(keycode) => self.input.update_key(keycode, true),

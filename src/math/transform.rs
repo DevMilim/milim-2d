@@ -1,6 +1,6 @@
 use crate::Vector2;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Transform2D {
     pub position: Vector2,
     pub rotation: f32,
