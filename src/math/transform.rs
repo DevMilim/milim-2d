@@ -54,3 +54,9 @@ impl Transform2D {
         }
     }
 }
+
+impl Default for Transform2D {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}

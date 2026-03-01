@@ -96,6 +96,12 @@ impl Vector2 {
     }
 }
 
+impl Default for Vector2 {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
 impl Add for Vector2 {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {

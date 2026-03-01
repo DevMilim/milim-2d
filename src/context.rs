@@ -1,9 +1,11 @@
 use std::{any::Any, collections::VecDeque};
 
 use indexmap::IndexMap;
+use sdl2::pixels::Color;
 
 use crate::{
-    CollisionWorld, EngineCommands, GlobalEvent, Id, InputState, Vector2, WindowGraphicsAdapter,
+    CollisionWorld, DrawCommand, DrawCommandType, DrawData, EngineCommands, GlobalEvent, Id,
+    InputState, Resources, Vector2, WindowGraphicsAdapter,
 };
 
 pub struct EngineContext<'a> {
@@ -14,16 +16,20 @@ pub struct EngineContext<'a> {
     pub mailbox: &'a mut IndexMap<Id, Vec<Box<dyn Any>>>,
     pub collision: &'a mut CollisionWorld,
     pub camera_pos: &'a mut Vector2,
+    pub resources: &'a mut Resources,
+    pub fixed_delta_time: &'a f32,
 }
 impl<'a> EngineContext<'a> {
     pub fn new(
-        adapter: &'a mut dyn WindowGraphicsAdapter,
+        adapter: &'a mut impl WindowGraphicsAdapter,
         input: &'a InputState,
         event_queue: &'a mut VecDeque<EngineCommands>,
         events: &'a mut VecDeque<GlobalEvent>,
         mailbox: &'a mut IndexMap<Id, Vec<Box<dyn Any>>>,
         collision: &'a mut CollisionWorld,
         camera_pos: &'a mut Vector2,
+        resources: &'a mut Resources,
+        fixed_delta_time: &'a f32,
     ) -> Self {
         Self {
             adapter,
@@ -33,6 +39,8 @@ impl<'a> EngineContext<'a> {
             mailbox,
             collision,
             camera_pos,
+            resources,
+            fixed_delta_time,
         }
     }
     pub fn send<T: 'static>(&mut self, id: Id, message: T) {
@@ -45,5 +53,30 @@ impl<'a> EngineContext<'a> {
     }
     pub fn quit(&mut self) {
         self.event_queue.push_front(EngineCommands::Quit);
+    }
+    pub fn draw_sprite(&mut self, image: usize, pos: Vector2, z_index: i32) {
+        let cmd = DrawCommand {
+            cmd_type: DrawCommandType::Sprite,
+            depth: 0,
+            material: DrawData {
+                image,
+                pos,
+                ..Default::default()
+            },
+        };
+        self.adapter.draw(cmd, z_index);
+    }
+    pub fn draw_rect(&mut self, pos: Vector2, size: Vector2, color: Color, z_index: i32) {
+        let cmd = DrawCommand {
+            cmd_type: DrawCommandType::Rect,
+            depth: 0,
+            material: DrawData {
+                pos,
+                size,
+                color,
+                ..Default::default()
+            },
+        };
+        self.adapter.draw(cmd, z_index);
     }
 }

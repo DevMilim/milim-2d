@@ -5,8 +5,8 @@ edition = "2024"
 
 [dependencies]
 darling = "0.23.0"
-proc-macro2 = "1.0.104"
-quote = "1.0.42"
+proc-macro2 = "1.0.106"
+quote = "1.0.44"
 syn = { version = "2", features = ["full"] }
 
 [lib]

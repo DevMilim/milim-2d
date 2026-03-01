@@ -1,6 +1,5 @@
 mod audio;
 mod base;
-mod bitmap;
 mod collision;
 pub mod components;
 mod context;
@@ -15,7 +14,6 @@ mod scene;
 
 pub use audio::*;
 pub use base::*;
-pub use bitmap::*;
 pub use collision::*;
 pub use context::*;
 pub use core::*;
@@ -27,3 +25,5 @@ pub use math::*;
 pub use renderer::*;
 pub use resources::*;
 pub use scene::*;
+pub use sdl2::pixels::*;
+pub use sdl2::rect::*;

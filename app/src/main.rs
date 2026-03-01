@@ -1,6 +1,6 @@
 use milim_2d::{
-    Base, Component, Engine, EngineContext, GameObject, GameObjectBase, Id, Keycode, Rect, Scene,
-    Sdl2Adapter, Transform2D, TriggerEvent, Vector2,
+    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Id, Keycode, Rect,
+    Scene, Transform2D, TriggerEvent, Vector2,
     components::{body::Body2D, camera::Camera2D, collision::BoxCollider, sprite::Sprite2D},
 };
 
@@ -37,7 +37,15 @@ impl Player {
                 velocity: Vector2::ZERO,
             },
             camera: Camera2D::new(),
-            sprite: Sprite2D::new(texture_id, Rect::new(0.0, 0.0, 16.0, 16.0)),
+            sprite: Sprite2D {
+                texture_id,
+                source: Rect::new(0, 0, 24, 24),
+                offset: Vector2::ZERO,
+                flip_h: false,
+                flip_v: false,
+                z_index: 6,
+                color: Color::WHITE,
+            },
         }
     }
     pub fn on_trigger(&mut self, ctx: &mut EngineContext, event: &TriggerEvent) {
@@ -55,8 +63,14 @@ impl GameObject for Player {
 
         self.body.velocity = direction * speed;
 
-        let dt = 1.0 / 60.0;
-        self.body.move_and_slide(ctx, &mut self.base, dt);
+        if direction.x > 0.0 {
+            self.sprite.flip_h = false;
+        } else if direction.x < 0.0 {
+            self.sprite.flip_h = true
+        }
+
+        self.body
+            .move_and_slide(ctx, &mut self.base, *ctx.fixed_delta_time);
     }
     fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {
         // recebe um evento emitido com ctx.send(id, Self::Message)
@@ -87,7 +101,7 @@ pub struct MainWorld {
 impl GameObject for MainWorld {
     type Message = ();
     fn start(&mut self, ctx: &mut EngineContext) {
-        let texture_id = ctx.adapter.load_image("tilemap.png");
+        let texture_id = ctx.resources.load_image("tilemap.png");
         self.player = Some(Player::new(texture_id))
     }
     fn fixed_update(&mut self, ctx: &mut EngineContext) {}
@@ -99,7 +113,7 @@ enum GameScene {
 }
 
 fn main() {
-    let mut engine = Engine::<Sdl2Adapter, GameScene>::new("Milim Engine", 800, 600);
+    let mut engine = Engine::<GameScene>::new("Milim Engine", 800, 600);
 
     engine.set_scene(GameScene::Main(MainWorld {
         base: Base::new(Transform2D::EMPTY),

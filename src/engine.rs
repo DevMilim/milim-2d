@@ -1,12 +1,16 @@
 use std::{any::Any, collections::VecDeque, time::Instant};
 
 use indexmap::IndexMap;
-use sdl2::keyboard::Keycode;
+use sdl2::{keyboard::Keycode, pixels::Color};
 
 use crate::{
-    Base, CollisionWorld, Color, EngineContext, GameObjectDispatch, GlobalEvent, Id, InputState,
-    Transform2D, TriggerEvent, TriggerKind, Vector2, WindowConfig, WindowGraphicsAdapter,
+    Base, CollisionWorld, EngineContext, GameObjectDispatch, GlobalEvent, Id, InputState,
+    Resources, Sdl2Adapter, Transform2D, TriggerEvent, TriggerKind, Vector2, WindowConfig,
+    WindowGraphicsAdapter,
 };
+
+const FIXED_DT: f32 = 1.0 / 60.0;
+
 #[derive(Debug, Clone)]
 pub enum EngineCommands {
     KeyDown(Keycode),
@@ -15,9 +19,9 @@ pub enum EngineCommands {
     Quit,
 }
 
-pub struct Engine<B: WindowGraphicsAdapter, S: GameObjectDispatch> {
+pub struct Engine<S: GameObjectDispatch> {
     objects: Vec<S>,
-    adapter: B,
+    adapter: Sdl2Adapter,
     base: Base,
     is_running: bool,
     pub input: InputState,
@@ -26,17 +30,21 @@ pub struct Engine<B: WindowGraphicsAdapter, S: GameObjectDispatch> {
     mailbox: IndexMap<Id, Vec<Box<dyn Any>>>,
     physics: CollisionWorld,
     camera_pos: Vector2,
+    resources: Resources,
+    fixed_delta_time: f32,
 }
 
-impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
+impl<S: GameObjectDispatch> Engine<S> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
+        let adapter = Sdl2Adapter::new(WindowConfig {
+            title: title.to_string(),
+            width,
+            height,
+        });
         Self {
+            resources: Resources::new(adapter.canvas.texture_creator()),
             objects: Vec::new(),
-            adapter: B::new(WindowConfig {
-                title: title.to_string(),
-                width,
-                height,
-            }),
+            adapter,
             base: Base::new(Transform2D::new(0.0, 0.0)),
             is_running: true,
             input: InputState::new(),
@@ -45,6 +53,7 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             mailbox: IndexMap::new(),
             physics: CollisionWorld::new(),
             camera_pos: Vector2::ZERO,
+            fixed_delta_time: FIXED_DT,
         }
     }
     pub fn push(&mut self, mut scene: S) {
@@ -56,6 +65,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.mailbox,
             &mut self.physics,
             &mut self.camera_pos,
+            &mut self.resources,
+            &mut self.fixed_delta_time,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.push(scene);
@@ -69,6 +80,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.mailbox,
             &mut self.physics,
             &mut self.camera_pos,
+            &mut self.resources,
+            &mut self.fixed_delta_time,
         );
         match self.objects.pop() {
             Some(mut scene) => scene.dispatch_destroy(&mut ctx),
@@ -84,6 +97,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             &mut self.mailbox,
             &mut self.physics,
             &mut self.camera_pos,
+            &mut self.resources,
+            &mut self.fixed_delta_time,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.clear();
@@ -93,7 +108,6 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
         let mut last = Instant::now();
         let mut accumulator = 0.0_f32;
 
-        const FIXED_DT: f32 = 1.0 / 60.0;
         const MAX_ACCUM: f32 = 0.5;
 
         while self.is_running {
@@ -119,6 +133,8 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
                 &mut self.mailbox,
                 &mut self.physics,
                 &mut self.camera_pos,
+                &mut self.resources,
+                &mut self.fixed_delta_time,
             );
 
             if let Some(obj) = self.objects.last_mut() {
@@ -197,7 +213,7 @@ impl<B: WindowGraphicsAdapter, S: GameObjectDispatch> Engine<B, S> {
             }
 
             self.process_commands();
-            self.adapter.present();
+            self.adapter.present(&mut self.resources.textures);
             self.physics.commit();
         }
     }

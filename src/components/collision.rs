@@ -1,4 +1,6 @@
-use crate::{AABB, ColliderData, ColliderKey, Color, Component, Rect};
+use sdl2::pixels::Color;
+
+use crate::{AABB, ColliderData, ColliderKey, Component, Vector2};
 
 pub struct BoxCollider {
     pub key: u32,
@@ -15,8 +17,8 @@ pub struct BoxCollider {
 impl Component for BoxCollider {
     fn update(&mut self, ctx: &mut crate::EngineContext, base: &mut crate::Base, delta: f32) {
         let aabb = AABB {
-            x: base.transform.position.x + self.offset_x,
-            y: base.transform.position.y + self.offset_y,
+            x: base.transform.global_position.x + self.offset_x,
+            y: base.transform.global_position.y + self.offset_y,
             width: self.width,
             height: self.height,
         };
@@ -37,11 +39,18 @@ impl Component for BoxCollider {
         );
     }
     fn draw(&mut self, ctx: &mut crate::EngineContext, base: &crate::Base) {
-        let color = if self.is_sensor {
-            Color::rgb(0, 0, 255)
-        } else {
-            Color::rgb(255, 0, 0)
-        };
+        if self.debug {
+            let color = if self.is_sensor {
+                Color::RGB(0, 0, 255)
+            } else {
+                Color::RGB(255, 0, 0)
+            };
+            let draw_pos = Vector2::new(
+                base.transform.global_position.x + self.offset_x + (self.width / 2.0),
+                base.transform.global_position.y + self.offset_y + (self.height / 2.0),
+            );
+            ctx.draw_rect(draw_pos, Vector2::new(self.width, self.height), color, 0);
+        }
     }
     fn destroy(&mut self, ctx: &mut crate::EngineContext, base: &crate::Base) {
         ctx.collision.remove_collider(ColliderKey {

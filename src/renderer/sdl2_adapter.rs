@@ -4,12 +4,12 @@ use sdl2::{
     event::WindowEvent,
     gfx::framerate::FPSManager,
     pixels::Color,
-    render::{Texture, TextureCreator, WindowCanvas},
-    video::WindowContext,
+    rect::{Point, Rect},
+    render::{Texture, WindowCanvas},
 };
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use crate::{DrawCommand, EngineCommands, Vector2, WindowGraphicsAdapter};
+use crate::{AssetCache, DrawCommand, EngineCommands, Vector2, WindowGraphicsAdapter};
 
 pub struct WindowConfig {
     pub title: String,
@@ -18,13 +18,10 @@ pub struct WindowConfig {
 }
 
 pub struct Sdl2Adapter {
-    canvas: WindowCanvas,
+    pub(crate) canvas: WindowCanvas,
     sdl: Sdl,
     event_pump: EventPump,
     window_config: WindowConfig,
-    texture_creator: TextureCreator<WindowContext>,
-    textures: Vec<Texture>,
-    texture_path: HashMap<String, usize>,
     video: VideoSubsystem,
     fps: FPSManager,
     draw_queue: BTreeMap<i32, Vec<DrawCommand>>,
@@ -57,6 +54,8 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
 
         let mut canvas = window.into_canvas().build().unwrap();
 
+        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
@@ -64,27 +63,24 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
         fps.set_framerate(60).unwrap();
 
         Self {
-            texture_creator: canvas.texture_creator(),
             canvas,
             video: sdl_context.video().unwrap(),
             event_pump: sdl_context.event_pump().unwrap(),
             sdl: sdl_context,
             window_config,
-            textures: Vec::new(),
             fps,
             draw_queue: BTreeMap::new(),
-            texture_path: HashMap::new(),
             camera_pos: Vector2::ZERO,
         }
     }
-    fn clear(&mut self, color: crate::Color) {
+    fn clear(&mut self, color: Color) {
         self.canvas
             .set_draw_color(Color::RGBA(color.r, color.g, color.b, color.a));
         self.canvas.clear();
     }
 
-    fn present(&mut self) {
-        self.render();
+    fn present(&mut self, assets: &mut AssetCache<Texture>) {
+        self.render(assets);
         self.canvas.present();
         self.fps.delay();
     }
@@ -93,23 +89,6 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
     }
     fn set_fps(&mut self, fps: u32) {
         let _ = self.fps.set_framerate(fps);
-    }
-
-    fn load_image(&mut self, path: &str) -> usize {
-        use sdl2::image::LoadTexture;
-
-        if let Some(id) = self.texture_path.get(path) {
-            return *id;
-        }
-        let texture = self
-            .texture_creator
-            .load_texture(path)
-            .expect("Falha ao carregar texture");
-        let index = self.textures.len();
-
-        self.textures.push(texture);
-        self.texture_path.insert(path.to_string(), index);
-        index
     }
 
     fn pool_events(&mut self, queue: &mut VecDeque<EngineCommands>) {
@@ -149,12 +128,67 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
         self.draw_queue.entry(z_index).or_default().push(command);
     }
 
-    fn render(&mut self) {
+    fn render(&mut self, assets: &mut AssetCache<Texture>) {
         let window_size = self.get_window_size();
         let half_screen = Vector2::new(window_size.x / 2.0, window_size.y / 2.0);
 
         for (_z, commands) in self.draw_queue.iter_mut() {
-            for cmd in commands.drain(..) {}
+            for cmd in commands.drain(..) {
+                let mat = &cmd.material;
+
+                let screen_x =
+                    (mat.pos.x - self.camera_pos.x + half_screen.x - (mat.size.x / 2.0)) as i32;
+                let screen_y =
+                    (mat.pos.y - self.camera_pos.y + half_screen.y - (mat.size.y / 2.0)) as i32;
+
+                let dst_rect = Rect::new(screen_x, screen_y, mat.size.x as u32, mat.size.y as u32);
+                match cmd.cmd_type {
+                    super::DrawCommandType::Sprite => {
+                        if let Some(texture) = assets.get_mut(mat.image) {
+                            let query = texture.query();
+                            let tex_w = query.width as f32;
+                            let tex_h = query.height as f32;
+
+                            let src_rect = if mat.uv_max.x > 0.0 && mat.uv_max.y > 0.0 {
+                                let src_x = (mat.uv_min.x * tex_w) as i32;
+                                let src_y = (mat.uv_min.y * tex_h) as i32;
+                                let src_w = ((mat.uv_max.x - mat.uv_min.x) * tex_w) as u32;
+                                let src_h = ((mat.uv_max.y - mat.uv_min.y) * tex_h) as u32;
+                                Some(Rect::new(src_x, src_y, src_w, src_h))
+                            } else {
+                                None
+                            };
+
+                            texture.set_color_mod(mat.color.r, mat.color.g, mat.color.b);
+                            texture.set_alpha_mod(mat.color.a);
+
+                            let center =
+                                Point::new((mat.size.x / 2.0) as i32, (mat.size.y / 2.0) as i32);
+
+                            self.canvas
+                                .copy_ex(
+                                    texture,
+                                    src_rect,
+                                    Some(dst_rect),
+                                    mat.rotation as f64,
+                                    Some(center),
+                                    mat.flip_h,
+                                    mat.flip_v,
+                                )
+                                .expect("Erro ao desenhar sprite")
+                        }
+                    }
+                    super::DrawCommandType::Rect => {
+                        self.canvas.set_draw_color(Color::RGBA(
+                            mat.color.r,
+                            mat.color.g,
+                            mat.color.b,
+                            mat.color.a,
+                        ));
+                        self.canvas.fill_rect(dst_rect).unwrap()
+                    }
+                }
+            }
         }
     }
 
