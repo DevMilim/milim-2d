@@ -7,14 +7,10 @@ impl Component for Body2D {}
 
 impl Body2D {
     pub fn move_and_slide(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {
-        let movement = Vector2 {
-            x: self.velocity.x * delta,
-            y: self.velocity.y * delta,
-        };
+        let movement = self.velocity * delta;
 
         base.transform.position.x += movement.x;
 
-        for (_key, data) in ctx.collision.colliders.iter_mut() {}
         for (key, data) in ctx.collision.colliders.iter_mut() {
             if key.id == base.id {
                 data.aabb.x += movement.x

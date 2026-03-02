@@ -1,10 +1,11 @@
 use sdl2::pixels::Color;
 
-use crate::{Component, DrawCommand, DrawCommandType, DrawData, Id, Rect, Transform2D, Vector2};
+use crate::{Component, DrawCommand, DrawCommandType, DrawData, Rect, Vector2};
 
 pub struct Sprite2D {
     pub texture_id: usize,
     pub source: Rect,
+    pub scale: Vector2,
     pub offset: Vector2,
     pub flip_h: bool,
     pub flip_v: bool,
@@ -22,6 +23,7 @@ impl Sprite2D {
             flip_v: false,
             z_index: 0,
             color: Color::WHITE,
+            scale: Vector2::ONE,
         }
     }
 }
@@ -34,15 +36,15 @@ impl Component for Sprite2D {
             return;
         };
 
-        let uv_min = Vector2::new(self.source.x as f32 / tex_h, self.source.y as f32 / tex_w);
+        let uv_min = Vector2::new(self.source.x as f32 / tex_w, self.source.y as f32 / tex_h);
         let uv_max = Vector2::new(
-            (self.source.x + self.source.h) as f32 / tex_w,
-            (self.source.y + self.source.w) as f32 / tex_h,
+            (self.source.x + self.source.w) as f32 / tex_w,
+            (self.source.y + self.source.h) as f32 / tex_h,
         );
 
         let final_size = Vector2::new(
-            self.source.w as f32 * base.transform.global_scale.x,
-            self.source.h as f32 * base.transform.global_scale.y,
+            self.source.w as f32 * base.transform.global_scale.x * self.scale.x,
+            self.source.h as f32 * base.transform.global_scale.y * self.scale.y,
         );
 
         let material = DrawData {

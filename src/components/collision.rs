@@ -17,8 +17,8 @@ pub struct BoxCollider {
 impl Component for BoxCollider {
     fn update(&mut self, ctx: &mut crate::EngineContext, base: &mut crate::Base, delta: f32) {
         let aabb = AABB {
-            x: base.transform.global_position.x + self.offset_x,
-            y: base.transform.global_position.y + self.offset_y,
+            x: base.transform.global_position.x - (self.width / 2.0) + self.offset_x,
+            y: base.transform.global_position.y - (self.height / 2.0) + self.offset_y,
             width: self.width,
             height: self.height,
         };
@@ -46,10 +46,10 @@ impl Component for BoxCollider {
                 Color::RGB(255, 0, 0)
             };
             let draw_pos = Vector2::new(
-                base.transform.global_position.x + self.offset_x + (self.width / 2.0),
-                base.transform.global_position.y + self.offset_y + (self.height / 2.0),
+                base.transform.global_position.x + self.offset_x,
+                base.transform.global_position.y + self.offset_y,
             );
-            ctx.draw_rect(draw_pos, Vector2::new(self.width, self.height), color, 0);
+            ctx.draw_rect(draw_pos, Vector2::new(self.width, self.height), color, 10);
         }
     }
     fn destroy(&mut self, ctx: &mut crate::EngineContext, base: &crate::Base) {

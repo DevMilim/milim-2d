@@ -36,7 +36,7 @@ impl Player {
             body: Body2D {
                 velocity: Vector2::ZERO,
             },
-            camera: Camera2D::new(),
+            camera: Camera2D::new(Vector2::new(100.0, 100.0)),
             sprite: Sprite2D {
                 texture_id,
                 source: Rect::new(0, 0, 24, 24),
@@ -45,6 +45,7 @@ impl Player {
                 flip_v: false,
                 z_index: 6,
                 color: Color::WHITE,
+                scale: Vector2::new(1.0, 1.0),
             },
         }
     }

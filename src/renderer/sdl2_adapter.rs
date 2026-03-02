@@ -7,7 +7,7 @@ use sdl2::{
     rect::{Point, Rect},
     render::{Texture, WindowCanvas},
 };
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 
 use crate::{AssetCache, DrawCommand, EngineCommands, Vector2, WindowGraphicsAdapter};
 
@@ -179,13 +179,8 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
                         }
                     }
                     super::DrawCommandType::Rect => {
-                        self.canvas.set_draw_color(Color::RGBA(
-                            mat.color.r,
-                            mat.color.g,
-                            mat.color.b,
-                            mat.color.a,
-                        ));
-                        self.canvas.fill_rect(dst_rect).unwrap()
+                        self.canvas.set_draw_color(mat.color);
+                        self.canvas.draw_rect(dst_rect).unwrap()
                     }
                 }
             }
