@@ -200,4 +200,14 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
     fn set_camera_pos(&mut self, pos: &Vector2) {
         self.camera_pos = *pos
     }
+
+    fn get_width(&self) -> u32 {
+        let window_size = self.canvas.window().size();
+        window_size.0
+    }
+
+    fn get_height(&self) -> u32 {
+        let window_size = self.canvas.window().size();
+        window_size.1
+    }
 }

@@ -31,7 +31,7 @@ impl Player {
                 debug: true,
                 layer: 1,
                 mask: 1,
-                is_sensor: true,
+                is_sensor: false,
             },
             body: Body2D {
                 velocity: Vector2::ZERO,

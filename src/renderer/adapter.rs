@@ -71,6 +71,8 @@ pub trait WindowGraphicsAdapter {
     fn resize(&mut self, width: u32, height: u32);
 
     fn get_window_size(&self) -> Vector2;
+    fn get_width(&self) -> u32;
+    fn get_height(&self) -> u32;
 
     fn set_camera_pos(&mut self, pos: &Vector2);
 }

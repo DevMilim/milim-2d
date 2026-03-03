@@ -23,6 +23,7 @@ pub trait GameObject: GameObjectBase {
     fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {}
     fn late_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
     fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
+    fn draw(&mut self, ctx: &mut EngineContext, base: &Base) {}
     fn destroy(&mut self, ctx: &mut EngineContext) {}
 }
 
