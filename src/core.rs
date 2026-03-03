@@ -22,7 +22,7 @@ pub trait GameObject: GameObjectBase {
     fn update(&mut self, ctx: &mut EngineContext, delta: f32) {}
     fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {}
     fn late_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
-    fn fixed_update(&mut self, ctx: &mut EngineContext) {}
+    fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
     fn destroy(&mut self, ctx: &mut EngineContext) {}
 }
 
@@ -31,7 +31,7 @@ pub trait Component {
     fn update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn late_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn on_event(&mut self, ctx: &mut EngineContext, base: &mut Base, event: &GlobalEvent) {}
-    fn fixed_update(&mut self, ctx: &mut EngineContext, base: &mut Base) {}
+    fn fixed_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
     fn draw(&mut self, ctx: &mut EngineContext, base: &Base) {}
     fn destroy(&mut self, ctx: &mut EngineContext, base: &Base) {}
 }
@@ -43,7 +43,7 @@ pub trait GameObjectDispatch {
     fn dispatch_start(&mut self, ctx: &mut EngineContext, base: &Base);
     fn dispatch_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32);
     fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32);
-    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base);
+    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32);
     fn dispatch_event(&mut self, ctx: &mut EngineContext, event: &GlobalEvent);
     fn dispatch_message(&mut self, ctx: &mut EngineContext);
     fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base);
@@ -84,9 +84,9 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
         });
     }
 
-    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base) {
+    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
         self.retain_mut(|obj| {
-            obj.dispatch_fixed_update(ctx, base);
+            obj.dispatch_fixed_update(ctx, base, delta);
             if obj.is_pending_removal() {
                 obj.dispatch_destroy(ctx);
                 return false;
@@ -157,9 +157,9 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Option<T> {
         }
     }
 
-    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base) {
+    fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
         if let Some(obj) = self.as_mut() {
-            obj.dispatch_fixed_update(ctx, base);
+            obj.dispatch_fixed_update(ctx, base, delta);
             if obj.is_pending_removal() {
                 obj.dispatch_destroy(ctx);
                 *self = None;

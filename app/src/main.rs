@@ -1,11 +1,11 @@
 use milim_2d::{
-    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Id, Keycode, Rect,
+    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Keycode, Rect,
     Scene, Transform2D, TriggerEvent, Vector2,
     components::{body::Body2D, camera::Camera2D, collision::BoxCollider, sprite::Sprite2D},
 };
 
 #[derive(GameObject)]
-#[game(subscribe(on_trigger: TriggerEvent))]
+#[game(connect(on_trigger: TriggerEvent))]
 struct Player {
     #[game(base)]
     base: Base,
@@ -31,7 +31,7 @@ impl Player {
                 debug: true,
                 layer: 1,
                 mask: 1,
-                is_sensor: false,
+                is_sensor: true,
             },
             body: Body2D {
                 velocity: Vector2::ZERO,
@@ -58,7 +58,7 @@ impl GameObject for Player {
     fn start(&mut self, ctx: &mut EngineContext) {
         println!("Hello")
     }
-    fn fixed_update(&mut self, ctx: &mut EngineContext) {
+    fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {
         let direction = ctx.input.get_vetor("up", "down", "left", "right");
         let speed = 200.0;
 
@@ -70,8 +70,7 @@ impl GameObject for Player {
             self.sprite.flip_h = true
         }
 
-        self.body
-            .move_and_slide(ctx, &mut self.base, *ctx.fixed_delta_time);
+        self.body.move_and_slide(ctx, &mut self.base, delta);
     }
     fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {
         // recebe um evento emitido com ctx.send(id, Self::Message)
@@ -105,7 +104,7 @@ impl GameObject for MainWorld {
         let texture_id = ctx.resources.load_image("tilemap.png");
         self.player = Some(Player::new(texture_id))
     }
-    fn fixed_update(&mut self, ctx: &mut EngineContext) {}
+    fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
 }
 
 #[derive(Scene)]

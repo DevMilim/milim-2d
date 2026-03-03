@@ -17,7 +17,6 @@ pub struct EngineContext<'a> {
     pub collision: &'a mut CollisionWorld,
     pub camera_pos: &'a mut Vector2,
     pub resources: &'a mut Resources,
-    pub fixed_delta_time: &'a f32,
 }
 impl<'a> EngineContext<'a> {
     pub fn new(
@@ -29,7 +28,6 @@ impl<'a> EngineContext<'a> {
         collision: &'a mut CollisionWorld,
         camera_pos: &'a mut Vector2,
         resources: &'a mut Resources,
-        fixed_delta_time: &'a f32,
     ) -> Self {
         Self {
             adapter,
@@ -40,7 +38,6 @@ impl<'a> EngineContext<'a> {
             collision,
             camera_pos,
             resources,
-            fixed_delta_time,
         }
     }
     pub fn send<T: 'static>(&mut self, id: Id, message: T) {
@@ -49,10 +46,14 @@ impl<'a> EngineContext<'a> {
     }
     pub fn emit<T: 'static>(&mut self, event: T) {
         let event = GlobalEvent::Broadcast(Box::new(event));
-        self.events.push_front(event);
+        self.events.push_back(event);
+    }
+    pub fn emit_targeted<T: 'static>(&mut self, id: Id, event: T) {
+        let event = GlobalEvent::Targeted(id, Box::new(event));
+        self.events.push_back(event);
     }
     pub fn quit(&mut self) {
-        self.event_queue.push_front(EngineCommands::Quit);
+        self.event_queue.push_back(EngineCommands::Quit);
     }
     pub fn draw_sprite(&mut self, image: usize, pos: Vector2, z_index: i32) {
         let cmd = DrawCommand {

@@ -66,7 +66,6 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.physics,
             &mut self.camera_pos,
             &mut self.resources,
-            &mut self.fixed_delta_time,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.push(scene);
@@ -81,7 +80,6 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.physics,
             &mut self.camera_pos,
             &mut self.resources,
-            &mut self.fixed_delta_time,
         );
         match self.objects.pop() {
             Some(mut scene) => scene.dispatch_destroy(&mut ctx),
@@ -98,7 +96,6 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.physics,
             &mut self.camera_pos,
             &mut self.resources,
-            &mut self.fixed_delta_time,
         );
         scene.dispatch_start(&mut ctx, &mut self.base);
         self.objects.clear();
@@ -134,7 +131,6 @@ impl<S: GameObjectDispatch> Engine<S> {
                 &mut self.physics,
                 &mut self.camera_pos,
                 &mut self.resources,
-                &mut self.fixed_delta_time,
             );
 
             if let Some(obj) = self.objects.last_mut() {
@@ -142,7 +138,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             }
             while accumulator > FIXED_DT {
                 if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_fixed_update(&mut ctx, &self.base)
+                    obj.dispatch_fixed_update(&mut ctx, &self.base, FIXED_DT)
                 }
                 accumulator -= FIXED_DT;
             }
@@ -163,7 +159,10 @@ impl<S: GameObjectDispatch> Engine<S> {
                         sensor: a.clone(),
                         kind: TriggerKind::Enter,
                     };
-                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(a.id, Box::new(ev.clone())));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(b.id, Box::new(ev)));
                 }
                 if db.is_sensor {
                     let ev = TriggerEvent {
@@ -171,7 +170,10 @@ impl<S: GameObjectDispatch> Engine<S> {
                         sensor: b.clone(),
                         kind: TriggerKind::Enter,
                     };
-                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(b.id, Box::new(ev.clone())));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(a.id, Box::new(ev)));
                 }
             }
             for (a, b) in ctx.collision.get_exited_pairs() {
@@ -184,7 +186,10 @@ impl<S: GameObjectDispatch> Engine<S> {
                         sensor: a.clone(),
                         kind: TriggerKind::Exit,
                     };
-                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(a.id, Box::new(ev.clone())));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(b.id, Box::new(ev)));
                 }
                 if db.is_sensor {
                     let ev = TriggerEvent {
@@ -192,7 +197,10 @@ impl<S: GameObjectDispatch> Engine<S> {
                         sensor: b.clone(),
                         kind: TriggerKind::Exit,
                     };
-                    ctx.events.push_back(GlobalEvent::Broadcast(Box::new(ev)));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(b.id, Box::new(ev.clone())));
+                    ctx.events
+                        .push_back(GlobalEvent::Targeted(a.id, Box::new(ev)));
                 }
             }
 
