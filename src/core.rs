@@ -15,26 +15,32 @@ impl Id {
     }
 }
 
+impl Default for Id {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub trait GameObject: GameObjectBase {
     type Message;
 
-    fn start(&mut self, ctx: &mut EngineContext) {}
-    fn update(&mut self, ctx: &mut EngineContext, delta: f32) {}
-    fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {}
-    fn late_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
-    fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {}
-    fn draw(&mut self, ctx: &mut EngineContext, base: &Base) {}
-    fn destroy(&mut self, ctx: &mut EngineContext) {}
+    fn start(&mut self, _ctx: &mut EngineContext) {}
+    fn update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    fn on_message(&mut self, _ctx: &mut EngineContext, _msg: &Self::Message) {}
+    fn late_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    fn fixed_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    fn draw(&mut self, _ctx: &mut EngineContext, _base: &Base) {}
+    fn destroy(&mut self, _ctx: &mut EngineContext) {}
 }
 
 pub trait Component {
-    fn start(&mut self, ctx: &mut EngineContext, base: &mut Base) {}
-    fn update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
-    fn late_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
-    fn on_event(&mut self, ctx: &mut EngineContext, base: &mut Base, event: &GlobalEvent) {}
-    fn fixed_update(&mut self, ctx: &mut EngineContext, base: &mut Base, delta: f32) {}
-    fn draw(&mut self, ctx: &mut EngineContext, base: &Base) {}
-    fn destroy(&mut self, ctx: &mut EngineContext, base: &Base) {}
+    fn start(&mut self, _ctx: &mut EngineContext, _base: &mut Base) {}
+    fn update(&mut self, _ctx: &mut EngineContext, _base: &mut Base, _delta: f32) {}
+    fn late_update(&mut self, _ctx: &mut EngineContext, _base: &mut Base, _delta: f32) {}
+    fn on_event(&mut self, _ctx: &mut EngineContext, _base: &mut Base, _event: &GlobalEvent) {}
+    fn fixed_update(&mut self, _ctx: &mut EngineContext, _base: &mut Base, _delta: f32) {}
+    fn draw(&mut self, _ctx: &mut EngineContext, _base: &Base) {}
+    fn destroy(&mut self, _ctx: &mut EngineContext, _base: &Base) {}
 }
 
 pub trait GameObjectDispatch {
@@ -59,7 +65,7 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 obj.dispatch_destroy(ctx);
                 return false;
             }
-            return true;
+            true
         });
     }
 
@@ -70,8 +76,8 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 obj.dispatch_destroy(ctx);
                 return false;
             }
-            return true;
-        });
+            true
+        })
     }
 
     fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
@@ -81,8 +87,8 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 obj.dispatch_destroy(ctx);
                 return false;
             }
-            return true;
-        });
+            true
+        })
     }
 
     fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
@@ -92,8 +98,8 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 obj.dispatch_destroy(ctx);
                 return false;
             }
-            return true;
-        });
+            true
+        })
     }
 
     fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base) {

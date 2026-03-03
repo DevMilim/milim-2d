@@ -31,7 +31,6 @@ pub struct Engine<S: GameObjectDispatch> {
     physics: CollisionWorld,
     camera_pos: Vector2,
     resources: Resources,
-    fixed_delta_time: f32,
 }
 
 impl<S: GameObjectDispatch> Engine<S> {
@@ -53,7 +52,6 @@ impl<S: GameObjectDispatch> Engine<S> {
             mailbox: IndexMap::new(),
             physics: CollisionWorld::new(),
             camera_pos: Vector2::ZERO,
-            fixed_delta_time: FIXED_DT,
         }
     }
     pub fn push(&mut self, mut scene: S) {
@@ -67,7 +65,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.camera_pos,
             &mut self.resources,
         );
-        scene.dispatch_start(&mut ctx, &mut self.base);
+        scene.dispatch_start(&mut ctx, &self.base);
         self.objects.push(scene);
     }
     pub fn pop(&mut self) {
@@ -81,9 +79,8 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.camera_pos,
             &mut self.resources,
         );
-        match self.objects.pop() {
-            Some(mut scene) => scene.dispatch_destroy(&mut ctx),
-            None => {}
+        if let Some(mut scene) = self.objects.pop() {
+            scene.dispatch_destroy(&mut ctx);
         };
     }
     pub fn set_scene(&mut self, mut scene: S) {
@@ -97,7 +94,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.camera_pos,
             &mut self.resources,
         );
-        scene.dispatch_start(&mut ctx, &mut self.base);
+        scene.dispatch_start(&mut ctx, &self.base);
         self.objects.clear();
         self.objects.push(scene);
     }
@@ -204,7 +201,7 @@ impl<S: GameObjectDispatch> Engine<S> {
                 }
             }
 
-            ctx.adapter.set_camera_pos(&ctx.camera_pos);
+            ctx.adapter.set_camera_pos(ctx.camera_pos);
 
             ctx.adapter.clear(Color {
                 r: 0,
@@ -229,7 +226,7 @@ impl<S: GameObjectDispatch> Engine<S> {
     pub fn quit(&mut self) {
         self.is_running = false
     }
-    pub fn flush_messages_and_events(objects: &mut Vec<S>, ctx: &mut EngineContext) {
+    pub fn flush_messages_and_events(objects: &mut [S], ctx: &mut EngineContext) {
         for _ in 0..10 {
             let mut something_processed = false;
             while let Some(event) = &ctx.events.pop_back() {

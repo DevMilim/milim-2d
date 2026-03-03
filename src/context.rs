@@ -58,7 +58,6 @@ impl<'a> EngineContext<'a> {
     pub fn draw_sprite(&mut self, image: usize, pos: Vector2, z_index: i32) {
         let cmd = DrawCommand {
             cmd_type: DrawCommandType::Sprite,
-            depth: 0,
             material: DrawData {
                 image,
                 pos,
@@ -70,7 +69,6 @@ impl<'a> EngineContext<'a> {
     pub fn draw_rect(&mut self, pos: Vector2, size: Vector2, color: Color, z_index: i32) {
         let cmd = DrawCommand {
             cmd_type: DrawCommandType::Rect,
-            depth: 0,
             material: DrawData {
                 pos,
                 size,

@@ -19,10 +19,10 @@ pub struct WindowConfig {
 
 pub struct Sdl2Adapter {
     pub(crate) canvas: WindowCanvas,
-    sdl: Sdl,
+    _sdl: Sdl,
     event_pump: EventPump,
     window_config: WindowConfig,
-    video: VideoSubsystem,
+    _video: VideoSubsystem,
     fps: FPSManager,
     draw_queue: BTreeMap<i32, Vec<DrawCommand>>,
     camera_pos: Vector2,
@@ -64,9 +64,9 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
 
         Self {
             canvas,
-            video: sdl_context.video().unwrap(),
+            _video: sdl_context.video().unwrap(),
             event_pump: sdl_context.event_pump().unwrap(),
-            sdl: sdl_context,
+            _sdl: sdl_context,
             window_config,
             fps,
             draw_queue: BTreeMap::new(),
@@ -113,11 +113,12 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
                 MouseMotion { x, y, .. } => {
                     queue.push_back(EngineCommands::MousePosition(x as f32, y as f32));
                 }
-                Window { win_event, .. } => {
-                    if let WindowEvent::Resized(w, h) = win_event {
-                        self.window_config.width = w as u32;
-                        self.window_config.height = h as u32;
-                    }
+                Window {
+                    win_event: WindowEvent::Resized(x, y),
+                    ..
+                } => {
+                    self.window_config.width = x as u32;
+                    self.window_config.height = y as u32;
                 }
                 _ => {}
             };

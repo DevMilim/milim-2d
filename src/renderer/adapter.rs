@@ -12,7 +12,6 @@ pub enum DrawCommandType {
 
 pub struct DrawCommand {
     pub cmd_type: DrawCommandType,
-    pub depth: i16,
     pub material: DrawData,
 }
 

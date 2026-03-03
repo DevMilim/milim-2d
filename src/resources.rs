@@ -41,12 +41,18 @@ impl<T> AssetCache<T> {
     }
 }
 
+impl<T> Default for AssetCache<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Resources {
     pub texture_creator: TextureCreator<WindowContext>,
     pub textures: AssetCache<Texture>,
 
-    sink_handle: rodio::MixerDeviceSink,
-    players: Mutex<HashMap<String, rodio::Player>>,
+    _sink_handle: rodio::MixerDeviceSink,
+    _players: Mutex<HashMap<String, rodio::Player>>,
 }
 
 impl Resources {
@@ -55,8 +61,8 @@ impl Resources {
         Self {
             texture_creator,
             textures: AssetCache::new(),
-            sink_handle: sink,
-            players: Mutex::new(HashMap::new()),
+            _sink_handle: sink,
+            _players: Mutex::new(HashMap::new()),
         }
     }
     pub fn load_image(&mut self, path: &str) -> usize {

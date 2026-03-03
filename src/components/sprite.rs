@@ -13,6 +13,21 @@ pub struct Sprite2D {
     pub color: Color,
 }
 
+impl Default for Sprite2D {
+    fn default() -> Self {
+        Self {
+            texture_id: 0,
+            source: Rect::new(0, 0, 0, 0),
+            scale: Vector2::ONE,
+            offset: Vector2::ZERO,
+            flip_h: false,
+            flip_v: false,
+            z_index: 0,
+            color: Color::BLACK,
+        }
+    }
+}
+
 impl Sprite2D {
     pub fn new(texture_id: usize, source: Rect) -> Self {
         Self {
@@ -35,6 +50,9 @@ impl Component for Sprite2D {
         } else {
             return;
         };
+        if tex_w == 0.0 || tex_h == 0.0 {
+            return;
+        }
 
         let uv_min = Vector2::new(self.source.x as f32 / tex_w, self.source.y as f32 / tex_h);
         let uv_max = Vector2::new(
@@ -62,7 +80,6 @@ impl Component for Sprite2D {
         ctx.adapter.draw(
             DrawCommand {
                 cmd_type: DrawCommandType::Sprite,
-                depth: 0,
                 material,
             },
             self.z_index,

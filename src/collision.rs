@@ -118,7 +118,7 @@ impl CollisionWorld {
             }
         }
 
-        let keys: Vec<_> = self.colliders.keys().cloned().collect();
+        let _keys: Vec<_> = self.colliders.keys().cloned().collect();
 
         let mut tested = HashSet::new();
 
@@ -253,5 +253,11 @@ impl CollisionWorld {
         } else {
             None
         }
+    }
+}
+
+impl Default for CollisionWorld {
+    fn default() -> Self {
+        Self::new()
     }
 }

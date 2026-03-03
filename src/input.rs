@@ -93,6 +93,12 @@ impl InputState {
     }
 }
 
+impl Default for InputState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct InputMap {
     pub bindig: HashMap<String, Vec<Keycode>>,
 }
@@ -105,5 +111,10 @@ impl InputMap {
     }
     pub fn bind_action(&mut self, action: &str, key: Keycode) {
         self.bindig.entry(action.to_string()).or_default().push(key);
+    }
+}
+impl Default for InputMap {
+    fn default() -> Self {
+        Self::new()
     }
 }

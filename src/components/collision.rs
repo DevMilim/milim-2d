@@ -14,8 +14,24 @@ pub struct BoxCollider {
     pub is_sensor: bool,
 }
 
+impl Default for BoxCollider {
+    fn default() -> Self {
+        Self {
+            key: 0,
+            width: 16.0,
+            height: 16.0,
+            offset_x: 0.0,
+            offset_y: 0.0,
+            layer: 1,
+            mask: 1,
+            debug: false,
+            is_sensor: false,
+        }
+    }
+}
+
 impl Component for BoxCollider {
-    fn update(&mut self, ctx: &mut crate::EngineContext, base: &mut crate::Base, delta: f32) {
+    fn update(&mut self, ctx: &mut crate::EngineContext, base: &mut crate::Base, _delta: f32) {
         let aabb = AABB {
             x: base.transform.global_position.x - (self.width / 2.0) + self.offset_x,
             y: base.transform.global_position.y - (self.height / 2.0) + self.offset_y,

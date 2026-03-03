@@ -13,7 +13,17 @@ impl Camera2D {
         Self {
             active: true,
             lerp_speed: 1.0,
-            deadzone: deadzone,
+            deadzone,
+        }
+    }
+}
+
+impl Default for Camera2D {
+    fn default() -> Self {
+        Self {
+            active: true,
+            lerp_speed: 1.0,
+            deadzone: Vector2::ZERO,
         }
     }
 }
@@ -46,7 +56,7 @@ impl Component for Camera2D {
         ctx.camera_pos.x = ctx.camera_pos.x + (target_pos.x - ctx.camera_pos.x) * t;
         ctx.camera_pos.y = ctx.camera_pos.y + (target_pos.y - ctx.camera_pos.y) * t;
     }
-    fn draw(&mut self, ctx: &mut crate::EngineContext, base: &crate::Base) {
+    fn draw(&mut self, ctx: &mut crate::EngineContext, _base: &crate::Base) {
         ctx.draw_rect(*ctx.camera_pos, self.deadzone * 2.0, Color::BLUE, 10);
     }
 }

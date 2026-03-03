@@ -40,7 +40,7 @@ impl Body2D {
             }
         }
 
-        for mut collider_data in my_colliders {
+        for collider_data in my_colliders {
             if let Some(correction) = ctx.collision.get_currection(my_id, &collider_data) {
                 if is_x_axis {
                     base.transform.position.x += correction.x;
@@ -49,8 +49,6 @@ impl Body2D {
                     base.transform.position.y += correction.y;
                     self.velocity.y = 0.0
                 }
-                collider_data.aabb.x += correction.x;
-                collider_data.aabb.y += correction.y;
             }
         }
     }
