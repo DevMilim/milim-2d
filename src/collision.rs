@@ -31,8 +31,8 @@ impl AABB {
         let distance_x = center_a_x - center_b_x;
         let distance_y = center_a_y - center_b_y;
 
-        let min_distance_x = (self.width + other.width) / 2.0;
-        let min_distance_y = (self.height + other.height) / 2.0;
+        let min_distance_x = f32::midpoint(self.width, other.width);
+        let min_distance_y = f32::midpoint(self.height, other.height);
 
         if distance_x.abs() < min_distance_x && distance_y.abs() < min_distance_y {
             let overlap_x = min_distance_x - distance_x.abs();
@@ -168,7 +168,7 @@ impl CollisionWorld {
     }
     pub fn commit(&mut self) {
         self.last_overlaps.clear();
-        for (k, _) in self.current_overlaps.iter() {
+        for (k, ()) in &self.current_overlaps {
             self.last_overlaps.insert(k.clone(), ());
         }
     }
@@ -245,7 +245,7 @@ impl CollisionWorld {
             if let Some(overlap) = my_data.aabb.get_overlap(&other.aabb) {
                 total_correction.x += overlap.x;
                 total_correction.y += overlap.y;
-                collided = true
+                collided = true;
             }
         }
         if collided {

@@ -81,7 +81,7 @@ impl<S: GameObjectDispatch> Engine<S> {
         );
         if let Some(mut scene) = self.objects.pop() {
             scene.dispatch_destroy(&mut ctx);
-        };
+        }
     }
     pub fn set_scene(&mut self, mut scene: S) {
         let mut ctx = EngineContext::new(
@@ -131,17 +131,17 @@ impl<S: GameObjectDispatch> Engine<S> {
             );
 
             if let Some(obj) = self.objects.last_mut() {
-                obj.dispatch_update(&mut ctx, &self.base, delta_time)
+                obj.dispatch_update(&mut ctx, &self.base, delta_time);
             }
             while accumulator > FIXED_DT {
                 if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_fixed_update(&mut ctx, &self.base, FIXED_DT)
+                    obj.dispatch_fixed_update(&mut ctx, &self.base, FIXED_DT);
                 }
                 accumulator -= FIXED_DT;
             }
 
             if let Some(obj) = self.objects.last_mut() {
-                obj.dispatch_late_update(&mut ctx, &self.base, delta_time)
+                obj.dispatch_late_update(&mut ctx, &self.base, delta_time);
             }
             Self::flush_messages_and_events(&mut self.objects, &mut ctx);
             ctx.collision.step();
@@ -211,7 +211,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             });
             {
                 if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_draw(&mut ctx, &self.base)
+                    obj.dispatch_draw(&mut ctx, &self.base);
                 } else {
                     self.quit();
                 }
@@ -224,7 +224,7 @@ impl<S: GameObjectDispatch> Engine<S> {
     }
 
     pub fn quit(&mut self) {
-        self.is_running = false
+        self.is_running = false;
     }
     pub fn flush_messages_and_events(objects: &mut [S], ctx: &mut EngineContext) {
         for _ in 0..10 {

@@ -59,8 +59,8 @@ impl<'a> EngineContext<'a> {
         let cmd = DrawCommand {
             cmd_type: DrawCommandType::Sprite,
             material: DrawData {
-                image,
                 pos,
+                image,
                 ..Default::default()
             },
         };

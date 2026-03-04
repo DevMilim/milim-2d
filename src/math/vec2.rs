@@ -81,10 +81,10 @@ impl Vector2 {
         let dist = dist_sq.sqrt();
         let max_step = speed * delta;
         if dist <= max_step {
-            *pos = target
+            *pos = target;
         } else {
             let dir = to_target / dist;
-            *pos += dir * max_step
+            *pos += dir * max_step;
         }
     }
     pub fn from_direction(direction: Self, speed: f32) -> Self {

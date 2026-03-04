@@ -92,7 +92,7 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
     }
 
     fn pool_events(&mut self, queue: &mut VecDeque<EngineCommands>) {
-        use sdl2::event::Event::*;
+        use sdl2::event::Event::{Quit, KeyDown, KeyUp, MouseMotion, Window};
         for event in self.event_pump.poll_iter() {
             match event {
                 Quit { .. } => {
@@ -121,7 +121,7 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
                     self.window_config.height = y as u32;
                 }
                 _ => {}
-            };
+            }
         }
     }
 
@@ -133,7 +133,7 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
         let window_size = self.get_window_size();
         let half_screen = Vector2::new(window_size.x / 2.0, window_size.y / 2.0);
 
-        for (_z, commands) in self.draw_queue.iter_mut() {
+        for commands in self.draw_queue.values_mut() {
             for cmd in commands.drain(..) {
                 let mat = &cmd.material;
 
@@ -171,17 +171,17 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
                                     texture,
                                     src_rect,
                                     Some(dst_rect),
-                                    mat.rotation as f64,
+                                    f64::from(mat.rotation),
                                     Some(center),
                                     mat.flip_h,
                                     mat.flip_v,
                                 )
-                                .expect("Erro ao desenhar sprite")
+                                .expect("Erro ao desenhar sprite");
                         }
                     }
                     super::DrawCommandType::Rect => {
                         self.canvas.set_draw_color(mat.color);
-                        self.canvas.draw_rect(dst_rect).unwrap()
+                        self.canvas.draw_rect(dst_rect).unwrap();
                     }
                 }
             }
@@ -199,7 +199,7 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
     }
 
     fn set_camera_pos(&mut self, pos: &Vector2) {
-        self.camera_pos = *pos
+        self.camera_pos = *pos;
     }
 
     fn get_width(&self) -> u32 {

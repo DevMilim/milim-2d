@@ -77,7 +77,7 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 return false;
             }
             true
-        })
+        });
     }
 
     fn dispatch_late_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
@@ -88,7 +88,7 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 return false;
             }
             true
-        })
+        });
     }
 
     fn dispatch_fixed_update(&mut self, ctx: &mut EngineContext, base: &Base, delta: f32) {
@@ -99,7 +99,7 @@ impl<T: GameObjectDispatch + GameObject> GameObjectDispatch for Vec<T> {
                 return false;
             }
             true
-        })
+        });
     }
 
     fn dispatch_draw(&mut self, ctx: &mut EngineContext, base: &Base) {

@@ -8,7 +8,6 @@ pub struct InputState {
     key_pressed: HashSet<Keycode>,
     key_just_pressed: HashSet<Keycode>,
     mouse_position: Vector2,
-
     pub map: InputMap,
 }
 
@@ -22,7 +21,7 @@ impl InputState {
         }
     }
     pub(crate) fn set_mouse_position(&mut self, x: f32, y: f32) {
-        self.mouse_position = Vector2::new(x, y)
+        self.mouse_position = Vector2::new(x, y);
     }
     pub fn is_action_pressed(&self, action: &str) -> bool {
         if let Some(keys) = self.map.bindig.get(action) {
@@ -103,6 +102,12 @@ pub struct InputMap {
     pub bindig: HashMap<String, Vec<Keycode>>,
 }
 
+impl Default for InputMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InputMap {
     pub fn new() -> Self {
         Self {
@@ -111,10 +116,5 @@ impl InputMap {
     }
     pub fn bind_action(&mut self, action: &str, key: Keycode) {
         self.bindig.entry(action.to_string()).or_default().push(key);
-    }
-}
-impl Default for InputMap {
-    fn default() -> Self {
-        Self::new()
     }
 }

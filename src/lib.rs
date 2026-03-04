@@ -12,7 +12,6 @@ mod renderer;
 mod resources;
 mod scene;
 
-pub use audio::*;
 pub use base::*;
 pub use collision::*;
 pub use context::*;
@@ -24,6 +23,5 @@ pub use macros::*;
 pub use math::*;
 pub use renderer::*;
 pub use resources::*;
-pub use scene::*;
 pub use sdl2::pixels::*;
 pub use sdl2::rect::*;

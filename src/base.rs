@@ -20,7 +20,7 @@ impl Base {
         }
     }
     pub fn queue_free(&mut self) {
-        self.pending_removal = true
+        self.pending_removal = true;
     }
 }
 
@@ -49,32 +49,32 @@ pub trait GameObjectBase {
     }
 
     fn set_position(&mut self, position: Vector2) {
-        self.base_mut().transform.position = position
+        self.base_mut().transform.position = position;
     }
     fn set_rotation(&mut self, rotation: f32) {
-        self.base_mut().transform.rotation = rotation
+        self.base_mut().transform.rotation = rotation;
     }
     fn set_scale(&mut self, scale: Vector2) {
-        self.base_mut().transform.scale = scale
+        self.base_mut().transform.scale = scale;
     }
 
     fn set_global_position(&mut self, position: Vector2) {
-        self.base_mut().transform.global_position = position
+        self.base_mut().transform.global_position = position;
     }
     fn set_global_rotation(&mut self, rotation: f32) {
-        self.base_mut().transform.global_rotation = rotation
+        self.base_mut().transform.global_rotation = rotation;
     }
     fn set_global_scale(&mut self, scale: Vector2) {
-        self.base_mut().transform.global_scale = scale
+        self.base_mut().transform.global_scale = scale;
     }
 
     fn queue_free(&mut self) {
-        self.base_mut().pending_removal = true
+        self.base_mut().pending_removal = true;
     }
     fn z_index(&self) -> i32 {
         self.base().z_index
     }
     fn set_z_index(&mut self, z_index: i32) {
-        self.base_mut().z_index = z_index
+        self.base_mut().z_index = z_index;
     }
 }

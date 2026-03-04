@@ -11,17 +11,17 @@ impl Body2D {
 
         base.transform.position.x += movement.x;
 
-        for (key, data) in ctx.collision.colliders.iter_mut() {
+        for (key, data) in &mut ctx.collision.colliders {
             if key.id == base.id {
-                data.aabb.x += movement.x
+                data.aabb.x += movement.x;
             }
         }
         self.resolve_axis(ctx, base.id, base, true);
 
         base.transform.position.y += movement.y;
-        for (key, data) in ctx.collision.colliders.iter_mut() {
+        for (key, data) in &mut ctx.collision.colliders {
             if key.id == base.id {
-                data.aabb.y += movement.y
+                data.aabb.y += movement.y;
             }
         }
         self.resolve_axis(ctx, base.id, base, false);
@@ -44,10 +44,10 @@ impl Body2D {
             if let Some(correction) = ctx.collision.get_currection(my_id, &collider_data) {
                 if is_x_axis {
                     base.transform.position.x += correction.x;
-                    self.velocity.x = 0.0
+                    self.velocity.x = 0.0;
                 } else {
                     base.transform.position.y += correction.y;
-                    self.velocity.y = 0.0
+                    self.velocity.y = 0.0;
                 }
             }
         }
