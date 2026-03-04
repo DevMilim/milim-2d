@@ -4,13 +4,13 @@ Example:
 
 ```Rust
 use milim_2d::{
-    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Id, Keycode, Rect,
+    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Keycode, Rect,
     Scene, Transform2D, TriggerEvent, Vector2,
     components::{body::Body2D, camera::Camera2D, collision::BoxCollider, sprite::Sprite2D},
 };
 
 #[derive(GameObject)]
-#[game(subscribe(on_trigger: TriggerEvent))]
+#[game(connect(on_trigger: TriggerEvent))]
 struct Player {
     #[game(base)]
     base: Base,
@@ -28,41 +28,34 @@ impl Player {
         Self {
             base: Base::new(Transform2D::new(0.0, 0.0)),
             collision: BoxCollider {
-                key: 1,
-                width: 32.0,
-                height: 32.0,
-                offset_x: 0.0,
-                offset_y: 0.0,
+                width: 24.0,
+                height: 24.0,
                 debug: true,
-                layer: 1,
-                mask: 1,
-                is_sensor: false,
+                ..Default::default()
             },
             body: Body2D {
                 velocity: Vector2::ZERO,
             },
-            camera: Camera2D::new(),
+            camera: Camera2D::new(Vector2::new(100.0, 100.0)),
             sprite: Sprite2D {
                 texture_id,
                 source: Rect::new(0, 0, 24, 24),
-                offset: Vector2::ZERO,
-                flip_h: false,
-                flip_v: false,
                 z_index: 6,
                 color: Color::WHITE,
+                ..Default::default()
             },
         }
     }
-    pub fn on_trigger(&mut self, ctx: &mut EngineContext, event: &TriggerEvent) {
+    pub fn on_trigger(&mut self, _ctx: &mut EngineContext, event: &TriggerEvent) {
         println!("{:#?}", event);
     }
 }
 impl GameObject for Player {
     type Message = String;
-    fn start(&mut self, ctx: &mut EngineContext) {
+    fn start(&mut self, _ctx: &mut EngineContext) {
         println!("Hello")
     }
-    fn fixed_update(&mut self, ctx: &mut EngineContext) {
+    fn fixed_update(&mut self, ctx: &mut EngineContext, delta: f32) {
         let direction = ctx.input.get_vetor("up", "down", "left", "right");
         let speed = 200.0;
 
@@ -74,10 +67,9 @@ impl GameObject for Player {
             self.sprite.flip_h = true
         }
 
-        self.body
-            .move_and_slide(ctx, &mut self.base, *ctx.fixed_delta_time);
+        self.body.move_and_slide(ctx, &mut self.base, delta);
     }
-    fn on_message(&mut self, ctx: &mut EngineContext, msg: &Self::Message) {
+    fn on_message(&mut self, _ctx: &mut EngineContext, _msg: &Self::Message) {
         // recebe um evento emitido com ctx.send(id, Self::Message)
     }
 }
@@ -109,7 +101,7 @@ impl GameObject for MainWorld {
         let texture_id = ctx.resources.load_image("tilemap.png");
         self.player = Some(Player::new(texture_id))
     }
-    fn fixed_update(&mut self, ctx: &mut EngineContext) {}
+    fn fixed_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
 }
 
 #[derive(Scene)]
@@ -126,19 +118,13 @@ fn main() {
         wall: Wall {
             base: Base::new(Transform2D::new(50.0, 200.0)),
             collision: BoxCollider {
-                key: 1,
                 width: 500.0,
                 height: 50.0,
-                offset_x: 0.0,
-                offset_y: 0.0,
                 debug: true,
-                layer: 1,
-                mask: 1,
-                is_sensor: false,
+                ..Default::default()
             },
         },
     }));
-    engine.input.map.bind_action("up", Keycode::Up);
     engine.input.map.bind_action("up", Keycode::W);
     engine.input.map.bind_action("down", Keycode::S);
     engine.input.map.bind_action("left", Keycode::A);
