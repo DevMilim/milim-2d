@@ -26,3 +26,4 @@ pub use resources::*;
 pub use scene::*;
 pub use sdl2::pixels::*;
 pub use sdl2::rect::*;
+pub use sdl2::render::Texture;

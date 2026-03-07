@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use sdl2::{
     render::{Texture, TextureCreator},
@@ -19,23 +19,23 @@ impl<T> AssetCache<T> {
             next_id: 0,
         }
     }
-    fn current_id(&mut self) -> usize {
+    fn current_id(&mut self) -> Handler<T> {
         self.next_id += 1;
-        self.next_id
+        Handler::new(self.next_id)
     }
     pub fn get_id(&self, path: &str) -> Option<usize> {
         self.path_map.get(path).copied()
     }
-    pub fn get(&self, id: usize) -> Option<&T> {
-        self.assets.get(&id)
+    pub fn get(&self, id: Handler<Texture>) -> Option<&T> {
+        self.assets.get(&id.id)
     }
-    pub fn get_mut(&mut self, id: usize) -> Option<&mut T> {
-        self.assets.get_mut(&id)
+    pub fn get_mut(&mut self, id: Handler<Texture>) -> Option<&mut T> {
+        self.assets.get_mut(&id.id)
     }
-    pub fn insert(&mut self, path: &str, asset: T) -> usize {
+    pub fn insert(&mut self, path: &str, asset: T) -> Handler<T> {
         let id = self.current_id();
-        self.assets.insert(id, asset);
-        self.path_map.insert(path.to_string(), id);
+        self.assets.insert(id.id, asset);
+        self.path_map.insert(path.to_string(), id.id);
         id
     }
     pub fn clear(&mut self) {
@@ -48,6 +48,31 @@ impl<T> AssetCache<T> {
 impl<T> Default for AssetCache<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+#[derive(Debug, PartialEq, Eq)]
+pub struct Handler<T> {
+    pub id: usize,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> Clone for Handler<T> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            _phantom: self._phantom.clone(),
+        }
+    }
+}
+
+impl<T> Copy for Handler<T> {}
+
+impl<T> Handler<T> {
+    pub fn new(id: usize) -> Self {
+        Self {
+            id,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -63,11 +88,11 @@ impl Resources {
             textures: AssetCache::new(),
         }
     }
-    pub fn load_image(&mut self, path: &str) -> usize {
+    pub fn load_image(&mut self, path: &str) -> Handler<Texture> {
         use sdl2::image::LoadTexture;
 
         if let Some(id) = self.textures.get_id(path) {
-            return id;
+            return Handler::new(id);
         }
         let texture = self
             .texture_creator

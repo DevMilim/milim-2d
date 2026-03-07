@@ -1,11 +1,11 @@
 use std::{any::Any, collections::VecDeque};
 
 use indexmap::IndexMap;
-use sdl2::pixels::Color;
+use sdl2::{pixels::Color, render::Texture};
 
 use crate::{
     CollisionWorld, DrawCommand, DrawCommandType, DrawData, EngineCommands, GameObject,
-    GameObjectDispatch, GlobalEvent, Id, InputState, Resources, SpawnEvent, Vector2,
+    GameObjectDispatch, GlobalEvent, Handler, Id, InputState, Resources, SpawnEvent, Vector2,
     WindowGraphicsAdapter,
 };
 
@@ -59,7 +59,7 @@ impl<'a> EngineContext<'a> {
     pub fn quit(&mut self) {
         self.event_queue.push_back(EngineCommands::Quit);
     }
-    pub fn draw_sprite(&mut self, image: usize, pos: Vector2, z_index: i32) {
+    pub fn draw_sprite(&mut self, image: Handler<Texture>, pos: Vector2, z_index: i32) {
         let cmd = DrawCommand {
             cmd_type: DrawCommandType::Sprite,
             material: DrawData {

@@ -1,6 +1,6 @@
 use milim_2d::{
-    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Keycode, Rect,
-    Scene, SpawnEvent, Transform2D, TriggerEvent, Vector2,
+    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Handler, Keycode,
+    Rect, Scene, SpawnEvent, Texture, Transform2D, TriggerEvent, Vector2,
     components::{body::Body2D, camera::Camera2D, collision::BoxCollider, sprite::Sprite2D},
 };
 
@@ -19,7 +19,7 @@ struct Player {
     sprite: Sprite2D,
 }
 impl Player {
-    pub fn new(texture_id: usize) -> Self {
+    pub fn new(texture_id: Handler<Texture>) -> Self {
         Self {
             base: Base::new(Transform2D::new(0.0, 0.0)),
             collision: BoxCollider {

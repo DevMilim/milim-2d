@@ -1,9 +1,9 @@
-use sdl2::pixels::Color;
+use sdl2::{pixels::Color, render::Texture};
 
-use crate::{Component, DrawCommand, DrawCommandType, DrawData, Rect, Vector2};
+use crate::{Component, DrawCommand, DrawCommandType, DrawData, Handler, Rect, Vector2};
 
 pub struct Sprite2D {
-    pub texture_id: usize,
+    pub texture_id: Handler<Texture>,
     pub source: Rect,
     pub scale: Vector2,
     pub offset: Vector2,
@@ -16,7 +16,7 @@ pub struct Sprite2D {
 impl Default for Sprite2D {
     fn default() -> Self {
         Self {
-            texture_id: 0,
+            texture_id: Handler::new(0),
             source: Rect::new(0, 0, 0, 0),
             scale: Vector2::ONE,
             offset: Vector2::ZERO,
@@ -29,7 +29,7 @@ impl Default for Sprite2D {
 }
 
 impl Sprite2D {
-    pub fn new(texture_id: usize, source: Rect) -> Self {
+    pub fn new(texture_id: Handler<Texture>, source: Rect) -> Self {
         Self {
             texture_id,
             source,

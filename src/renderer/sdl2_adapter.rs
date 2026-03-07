@@ -92,7 +92,7 @@ impl WindowGraphicsAdapter for Sdl2Adapter {
     }
 
     fn pool_events(&mut self, queue: &mut VecDeque<EngineCommands>) {
-        use sdl2::event::Event::{Quit, KeyDown, KeyUp, MouseMotion, Window};
+        use sdl2::event::Event::{KeyDown, KeyUp, MouseMotion, Quit, Window};
         for event in self.event_pump.poll_iter() {
             match event {
                 Quit { .. } => {

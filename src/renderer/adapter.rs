@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use sdl2::{pixels::Color, render::Texture};
 
-use crate::{AssetCache, EngineCommands, Vector2, WindowConfig};
+use crate::{AssetCache, EngineCommands, Handler, Vector2, WindowConfig};
 
 #[derive(Debug)]
 pub enum DrawCommandType {
@@ -22,7 +22,7 @@ pub struct DrawData {
     pub uv_max: Vector2,
     pub rotation: f32,
     pub color: Color,
-    pub image: usize,
+    pub image: Handler<Texture>,
     pub flip_h: bool,
     pub flip_v: bool,
 }
@@ -41,7 +41,7 @@ impl Default for DrawData {
                 b: 255,
                 a: 255,
             },
-            image: 0,
+            image: Handler::new(0),
             flip_h: false,
             flip_v: false,
         }
