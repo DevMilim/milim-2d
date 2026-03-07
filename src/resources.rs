@@ -1,6 +1,5 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::collections::HashMap;
 
-use rodio::DeviceSinkBuilder;
 use sdl2::{
     render::{Texture, TextureCreator},
     video::WindowContext,
@@ -39,6 +38,11 @@ impl<T> AssetCache<T> {
         self.path_map.insert(path.to_string(), id);
         id
     }
+    pub fn clear(&mut self) {
+        self.assets.clear();
+        self.path_map.clear();
+        self.next_id = 0;
+    }
 }
 
 impl<T> Default for AssetCache<T> {
@@ -50,19 +54,13 @@ impl<T> Default for AssetCache<T> {
 pub struct Resources {
     pub texture_creator: TextureCreator<WindowContext>,
     pub textures: AssetCache<Texture>,
-
-    _sink_handle: rodio::MixerDeviceSink,
-    _players: Mutex<HashMap<String, rodio::Player>>,
 }
 
 impl Resources {
     pub fn new(texture_creator: TextureCreator<WindowContext>) -> Self {
-        let sink = DeviceSinkBuilder::open_default_sink().unwrap();
         Self {
             texture_creator,
             textures: AssetCache::new(),
-            _sink_handle: sink,
-            _players: Mutex::new(HashMap::new()),
         }
     }
     pub fn load_image(&mut self, path: &str) -> usize {
@@ -77,5 +75,8 @@ impl Resources {
             .expect("Falha ao carregar texture");
 
         self.textures.insert(path, texture)
+    }
+    pub fn clear(&mut self) {
+        self.textures.clear()
     }
 }

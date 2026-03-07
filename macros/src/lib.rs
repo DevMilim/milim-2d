@@ -280,52 +280,14 @@ pub fn scene_dispatch_derive(input: TokenStream) -> TokenStream {
     let variants: Vec<_> = data.variants.into_iter().map(|v| v.ident).collect();
 
     quote! {
-        impl ::milim_2d::GameObjectDispatch for #name {
-            fn is_pending_removal(&self) -> bool{
+        impl ::milim_2d::Scene for #name {
+            fn get_dispatch(&mut self) -> &mut impl ::milim_2d::GameObjectDispatch{
                 match self{
-                    #(Self::#variants(inner) => inner.is_pending_removal(),)*
+                    #(Self::#variants(inner) => inner)*
                 }
             }
-            fn dispatch_start(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_start(ctx, parent_base),)*
-                }
-            }
-            fn dispatch_event(&mut self, ctx: &mut ::milim_2d::EngineContext, event: &::milim_2d::GlobalEvent){
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_event(ctx, event),)*
-                }
-            }
-            fn dispatch_message(&mut self, ctx: &mut ::milim_2d::EngineContext){
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_message(ctx),)*
-                }
-            }
-            fn dispatch_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base, delta: f32) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_update(ctx, parent_base, delta),)*
-                }
-            }
-            fn dispatch_late_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base, delta: f32) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_late_update(ctx, parent_base, delta),)*
-                }
-            }
-            fn dispatch_fixed_update(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base, delta: f32) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_fixed_update(ctx, parent_base, delta),)*
-                }
-            }
-            fn dispatch_draw(&mut self, ctx: &mut ::milim_2d::EngineContext, parent_base: &::milim_2d::Base) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_draw(ctx, parent_base),)*
-                }
-            }
-            fn dispatch_destroy(&mut self, ctx: &mut ::milim_2d::EngineContext) {
-                match self{
-                    #(Self::#variants(inner) => inner.dispatch_destroy(ctx),)*
-                }
-            }
+
         }
-    }.into()
+    }
+    .into()
 }

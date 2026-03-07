@@ -4,8 +4,9 @@ use indexmap::IndexMap;
 use sdl2::pixels::Color;
 
 use crate::{
-    CollisionWorld, DrawCommand, DrawCommandType, DrawData, EngineCommands, GlobalEvent, Id,
-    InputState, Resources, Vector2, WindowGraphicsAdapter,
+    CollisionWorld, DrawCommand, DrawCommandType, DrawData, EngineCommands, GameObject,
+    GameObjectDispatch, GlobalEvent, Id, InputState, Resources, SpawnEvent, Vector2,
+    WindowGraphicsAdapter,
 };
 
 pub struct EngineContext<'a> {
@@ -51,6 +52,9 @@ impl<'a> EngineContext<'a> {
     pub fn emit_targeted<T: 'static>(&mut self, id: Id, event: T) {
         let event = GlobalEvent::Targeted(id, Box::new(event));
         self.events.push_back(event);
+    }
+    pub fn spawn<T: GameObject + GameObjectDispatch + 'static>(&mut self, obj: T) {
+        self.emit(SpawnEvent::new(obj));
     }
     pub fn quit(&mut self) {
         self.event_queue.push_back(EngineCommands::Quit);

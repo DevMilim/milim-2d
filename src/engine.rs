@@ -1,11 +1,17 @@
-use std::{any::Any, collections::VecDeque, time::Instant};
+use std::{
+    any::Any,
+    collections::{HashMap, VecDeque},
+    sync::Mutex,
+    time::Instant,
+};
 
 use indexmap::IndexMap;
+use rodio::DeviceSinkBuilder;
 use sdl2::{keyboard::Keycode, pixels::Color};
 
 use crate::{
     Base, CollisionWorld, EngineContext, GameObjectDispatch, GlobalEvent, Id, InputState,
-    Resources, Sdl2Adapter, Transform2D, TriggerEvent, TriggerKind, Vector2, WindowConfig,
+    Resources, Scene, Sdl2Adapter, Transform2D, TriggerEvent, TriggerKind, Vector2, WindowConfig,
     WindowGraphicsAdapter,
 };
 
@@ -19,7 +25,7 @@ pub enum EngineCommands {
     Quit,
 }
 
-pub struct Engine<S: GameObjectDispatch> {
+pub struct Engine<S: Scene> {
     objects: Vec<S>,
     adapter: Sdl2Adapter,
     base: Base,
@@ -31,15 +37,19 @@ pub struct Engine<S: GameObjectDispatch> {
     physics: CollisionWorld,
     camera_pos: Vector2,
     resources: Resources,
+    _sink_handle: rodio::MixerDeviceSink,
+    _players: Mutex<HashMap<String, rodio::Player>>,
 }
 
-impl<S: GameObjectDispatch> Engine<S> {
+impl<S: Scene> Engine<S> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         let adapter = Sdl2Adapter::new(WindowConfig {
             title: title.to_string(),
             width,
             height,
         });
+        let mut sink = DeviceSinkBuilder::open_default_sink().unwrap();
+        sink.log_on_drop(false);
         Self {
             resources: Resources::new(adapter.canvas.texture_creator()),
             objects: Vec::new(),
@@ -52,6 +62,8 @@ impl<S: GameObjectDispatch> Engine<S> {
             mailbox: IndexMap::new(),
             physics: CollisionWorld::new(),
             camera_pos: Vector2::ZERO,
+            _sink_handle: sink,
+            _players: Mutex::new(HashMap::new()),
         }
     }
     pub fn push(&mut self, mut scene: S) {
@@ -65,7 +77,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.camera_pos,
             &mut self.resources,
         );
-        scene.dispatch_start(&mut ctx, &self.base);
+        scene.get_dispatch().dispatch_start(&mut ctx, &self.base);
         self.objects.push(scene);
     }
     pub fn pop(&mut self) {
@@ -80,7 +92,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.resources,
         );
         if let Some(mut scene) = self.objects.pop() {
-            scene.dispatch_destroy(&mut ctx);
+            scene.get_dispatch().dispatch_destroy(&mut ctx);
         }
     }
     pub fn set_scene(&mut self, mut scene: S) {
@@ -94,7 +106,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             &mut self.camera_pos,
             &mut self.resources,
         );
-        scene.dispatch_start(&mut ctx, &self.base);
+        scene.get_dispatch().dispatch_start(&mut ctx, &self.base);
         self.objects.clear();
         self.objects.push(scene);
     }
@@ -131,17 +143,20 @@ impl<S: GameObjectDispatch> Engine<S> {
             );
 
             if let Some(obj) = self.objects.last_mut() {
-                obj.dispatch_update(&mut ctx, &self.base, delta_time);
+                obj.get_dispatch()
+                    .dispatch_update(&mut ctx, &self.base, delta_time);
             }
             while accumulator > FIXED_DT {
                 if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_fixed_update(&mut ctx, &self.base, FIXED_DT);
+                    obj.get_dispatch()
+                        .dispatch_fixed_update(&mut ctx, &self.base, FIXED_DT);
                 }
                 accumulator -= FIXED_DT;
             }
 
             if let Some(obj) = self.objects.last_mut() {
-                obj.dispatch_late_update(&mut ctx, &self.base, delta_time);
+                obj.get_dispatch()
+                    .dispatch_late_update(&mut ctx, &self.base, delta_time);
             }
             Self::flush_messages_and_events(&mut self.objects, &mut ctx);
             ctx.collision.step();
@@ -211,7 +226,7 @@ impl<S: GameObjectDispatch> Engine<S> {
             });
             {
                 if let Some(obj) = self.objects.last_mut() {
-                    obj.dispatch_draw(&mut ctx, &self.base);
+                    obj.get_dispatch().dispatch_draw(&mut ctx, &self.base);
                 } else {
                     self.quit();
                 }
@@ -232,13 +247,13 @@ impl<S: GameObjectDispatch> Engine<S> {
             while let Some(event) = &ctx.events.pop_back() {
                 something_processed = true;
                 if let Some(obj) = objects.last_mut() {
-                    obj.dispatch_event(ctx, event);
+                    obj.get_dispatch().dispatch_event(ctx, event);
                 }
             }
             if !ctx.mailbox.is_empty() {
                 something_processed = true;
                 if let Some(obj) = objects.last_mut() {
-                    obj.dispatch_message(ctx);
+                    obj.get_dispatch().dispatch_message(ctx);
                 }
             }
             if !something_processed {
@@ -255,5 +270,8 @@ impl<S: GameObjectDispatch> Engine<S> {
                 EngineCommands::MousePosition(x, y) => self.input.set_mouse_position(x, y),
             }
         }
+    }
+    pub fn clear_unecessary(&mut self) {
+        self.resources.clear();
     }
 }

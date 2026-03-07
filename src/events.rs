@@ -1,6 +1,6 @@
-use std::any::Any;
+use std::{any::Any, cell::RefCell};
 
-use crate::{ColliderKey, Id};
+use crate::{ColliderKey, GameObject, GameObjectDispatch, Id};
 
 pub enum GlobalEvent {
     Broadcast(Box<dyn Any>),
@@ -16,4 +16,19 @@ pub struct TriggerEvent {
     pub owner: Id,
     pub sensor: ColliderKey,
     pub kind: TriggerKind,
+}
+
+pub struct SpawnEvent<T> {
+    payload: RefCell<Option<T>>,
+}
+
+impl<T: GameObject + GameObjectDispatch> SpawnEvent<T> {
+    pub fn new(obj: T) -> Self {
+        Self {
+            payload: RefCell::new(Some(obj)),
+        }
+    }
+    pub fn take(&self) -> Option<T> {
+        self.payload.borrow_mut().take()
+    }
 }
