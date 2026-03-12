@@ -19,5 +19,5 @@ sdl2 = { version = "0.38.0", features = [
 uuid = { version = "1.21.0", features = ["v4", "v7"] }
 
 [workspace]
-members = ["app", "macros"]
+members = ["example", "macros"]
 resolver = "3"

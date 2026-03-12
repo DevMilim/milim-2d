@@ -22,14 +22,22 @@ impl Default for Id {
 }
 
 pub trait GameObject: GameObjectBase {
+    /// Define o tipo de mensagem que o GameObject pode receber em seu on_message
     type Message;
 
+    /// Executado uma vez ao iniciar a cena
     fn start(&mut self, _ctx: &mut EngineContext) {}
+    /// Metodo executado a cada frame do loop
     fn update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    /// Metodo responsavel por receber mensagens endereçadas para um GameObject especifico utilizando ctx.send(id, mensagem)
     fn on_message(&mut self, _ctx: &mut EngineContext, _msg: &Self::Message) {}
+    /// Metodo executado apos todos os updates do GameObject
     fn late_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    /// Metodo com execução fixa a 60 fps
     fn fixed_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
+    /// Metodo recomendado para utilizar para desenho quando não quiser utilizar componentes de desenho
     fn draw(&mut self, _ctx: &mut EngineContext, _base: &Base) {}
+    /// Metodo chamado quando um GameObject executa o metodo self.queue_free() usado para desalocação de recursos ou configuração ao ser removido da cena
     fn destroy(&mut self, _ctx: &mut EngineContext) {}
 }
 

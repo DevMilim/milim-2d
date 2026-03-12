@@ -26,6 +26,7 @@ impl Player {
                 width: 24.0,
                 height: 24.0,
                 debug: true,
+                is_sensor: true,
                 ..Default::default()
             },
             body: Body2D {
@@ -44,6 +45,7 @@ impl Player {
     }
     pub fn on_trigger(&mut self, _ctx: &mut EngineContext, event: &TriggerEvent) {
         println!("{:#?}", event);
+        self.queue_free();
     }
 }
 impl GameObject for Player {

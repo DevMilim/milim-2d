@@ -34,7 +34,7 @@ pub struct Engine<S: Scene> {
     event_queue: VecDeque<EngineCommands>,
     events: VecDeque<GlobalEvent>,
     mailbox: IndexMap<Id, Vec<Box<dyn Any>>>,
-    physics: CollisionWorld,
+    collision: CollisionWorld,
     camera_pos: Vector2,
     resources: Resources,
     _sink_handle: rodio::MixerDeviceSink,
@@ -60,7 +60,7 @@ impl<S: Scene> Engine<S> {
             event_queue: VecDeque::new(),
             events: VecDeque::new(),
             mailbox: IndexMap::new(),
-            physics: CollisionWorld::new(),
+            collision: CollisionWorld::new(),
             camera_pos: Vector2::ZERO,
             _sink_handle: sink,
             _players: Mutex::new(HashMap::new()),
@@ -73,7 +73,7 @@ impl<S: Scene> Engine<S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
-            &mut self.physics,
+            &mut self.collision,
             &mut self.camera_pos,
             &mut self.resources,
         );
@@ -87,7 +87,7 @@ impl<S: Scene> Engine<S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
-            &mut self.physics,
+            &mut self.collision,
             &mut self.camera_pos,
             &mut self.resources,
         );
@@ -102,7 +102,7 @@ impl<S: Scene> Engine<S> {
             &mut self.event_queue,
             &mut self.events,
             &mut self.mailbox,
-            &mut self.physics,
+            &mut self.collision,
             &mut self.camera_pos,
             &mut self.resources,
         );
@@ -137,7 +137,7 @@ impl<S: Scene> Engine<S> {
                 &mut self.event_queue,
                 &mut self.events,
                 &mut self.mailbox,
-                &mut self.physics,
+                &mut self.collision,
                 &mut self.camera_pos,
                 &mut self.resources,
             );
@@ -224,17 +224,15 @@ impl<S: Scene> Engine<S> {
                 b: 0,
                 a: 0,
             });
-            {
-                if let Some(obj) = self.objects.last_mut() {
-                    obj.get_dispatch().dispatch_draw(&mut ctx, &self.base);
-                } else {
-                    self.quit();
-                }
+            if let Some(obj) = self.objects.last_mut() {
+                obj.get_dispatch().dispatch_draw(&mut ctx, &self.base);
+            } else {
+                self.quit();
             }
 
             self.process_commands();
             self.adapter.present(&mut self.resources.textures);
-            self.physics.commit();
+            self.collision.commit();
         }
     }
 

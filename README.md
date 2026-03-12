@@ -4,8 +4,8 @@ Example:
 
 ```Rust
 use milim_2d::{
-    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Keycode, Rect,
-    Scene, Transform2D, TriggerEvent, Vector2,
+    Base, Color, Component, Engine, EngineContext, GameObject, GameObjectBase, Handler, Keycode,
+    Rect, Scene, SpawnEvent, Texture, Transform2D, TriggerEvent, Vector2,
     components::{body::Body2D, camera::Camera2D, collision::BoxCollider, sprite::Sprite2D},
 };
 
@@ -24,13 +24,14 @@ struct Player {
     sprite: Sprite2D,
 }
 impl Player {
-    pub fn new(texture_id: usize) -> Self {
+    pub fn new(texture_id: Handler<Texture>) -> Self {
         Self {
             base: Base::new(Transform2D::new(0.0, 0.0)),
             collision: BoxCollider {
                 width: 24.0,
                 height: 24.0,
                 debug: true,
+                is_sensor: true,
                 ..Default::default()
             },
             body: Body2D {
@@ -42,12 +43,14 @@ impl Player {
                 source: Rect::new(0, 0, 24, 24),
                 z_index: 6,
                 color: Color::WHITE,
+                scale: Vector2::new(1.2, 1.2),
                 ..Default::default()
             },
         }
     }
     pub fn on_trigger(&mut self, _ctx: &mut EngineContext, event: &TriggerEvent) {
         println!("{:#?}", event);
+        self.queue_free();
     }
 }
 impl GameObject for Player {
@@ -86,6 +89,7 @@ impl GameObject for Wall {
 }
 
 #[derive(GameObject)]
+#[game(subscribe(spawn_player: SpawnEvent<Player>))]
 pub struct MainWorld {
     #[game(base)]
     base: Base,
@@ -95,11 +99,18 @@ pub struct MainWorld {
     player: Option<Player>,
 }
 
+impl MainWorld {
+    fn spawn_player(&mut self, _ctx: &mut EngineContext, event: &SpawnEvent<Player>) {
+        self.player = event.take();
+        println!("Player spawned")
+    }
+}
+
 impl GameObject for MainWorld {
     type Message = ();
     fn start(&mut self, ctx: &mut EngineContext) {
         let texture_id = ctx.resources.load_image("tilemap.png");
-        self.player = Some(Player::new(texture_id))
+        ctx.spawn(Player::new(texture_id));
     }
     fn fixed_update(&mut self, _ctx: &mut EngineContext, _delta: f32) {}
 }
@@ -108,26 +119,31 @@ impl GameObject for MainWorld {
 enum GameScene {
     Main(MainWorld),
 }
+impl GameScene {
+    fn new() -> Self {
+        GameScene::Main(MainWorld {
+            base: Base::new(Transform2D::EMPTY),
+            player: None,
+            wall: Wall {
+                base: Base::new(Transform2D::new(50.0, 200.0)),
+                collision: BoxCollider {
+                    width: 500.0,
+                    height: 50.0,
+                    debug: true,
+                    ..Default::default()
+                },
+            },
+        })
+    }
+}
 
 fn main() {
     let mut engine = Engine::<GameScene>::new("Milim Engine", 800, 600);
 
-    engine.set_scene(GameScene::Main(MainWorld {
-        base: Base::new(Transform2D::EMPTY),
-        player: None,
-        wall: Wall {
-            base: Base::new(Transform2D::new(50.0, 200.0)),
-            collision: BoxCollider {
-                width: 500.0,
-                height: 50.0,
-                debug: true,
-                ..Default::default()
-            },
-        },
-    }));
+    engine.set_scene(GameScene::new());
     engine.input.map.bind_action("up", Keycode::W);
-    engine.input.map.bind_action("down", Keycode::S);
     engine.input.map.bind_action("left", Keycode::A);
+    engine.input.map.bind_action("down", Keycode::S);
     engine.input.map.bind_action("right", Keycode::D);
     engine.run();
 }
